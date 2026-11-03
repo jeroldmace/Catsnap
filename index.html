@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1f2a44" />
+  <title>Cat Snap</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">🐾</span>
+        <span class="brand-name">Cat Snap</span>
+      </div>
+      <div class="topbar-right">
+        <span class="points-pill" id="pointsPill" title="Your snap points">0 pts</span>
+      </div>
+    </header>
+
+    <main class="views">
+      <!-- FEED -->
+      <section class="view active" id="view-feed" aria-label="Feed">
+        <div class="feed-intro">
+          <h1>Out-in-the-world cats</h1>
+          <p>Strays, trail cats, temple guardians and market mousers. No couch cats allowed.</p>
+        </div>
+        <div class="chips" role="tablist" id="feedTabs">
+          <button class="chip active" data-sort="recent">Recent</button>
+          <button class="chip" data-sort="nearby">Nearby</button>
+          <button class="chip" data-sort="top">Top rated</button>
+          <button class="chip" data-sort="rare">Rare finds</button>
+        </div>
+        <div class="chips small" id="habitatFilter"></div>
+        <div class="feed" id="feed"></div>
+      </section>
+
+      <!-- RADAR -->
+      <section class="view" id="view-radar" aria-label="Cat radar">
+        <div class="radar-wrap">
+          <div id="map"></div>
+          <div class="radar-sweep" aria-hidden="true"></div>
+          <div class="radar-controls">
+            <div class="seg" id="radiusSeg">
+              <button data-r="1">1 km</button>
+              <button data-r="3" class="active">3 km</button>
+              <button data-r="10">10 km</button>
+            </div>
+            <div class="seg" id="ageSeg">
+              <button data-h="1">1 h</button>
+              <button data-h="24" class="active">24 h</button>
+              <button data-h="168">7 d</button>
+            </div>
+            <button class="icon-btn" id="locateBtn" title="Use my location">📍</button>
+          </div>
+          <div class="radar-status" id="radarStatus"></div>
+        </div>
+        <div class="radar-list">
+          <div class="radar-list-head">
+            <h2>Nearby sightings</h2>
+            <span class="muted small" id="radarCount"></span>
+          </div>
+          <ul id="radarList"></ul>
+          <p class="privacy-note">🔒 Pins are blurred by ~100&nbsp;m so cats can't be tracked to an exact spot.</p>
+        </div>
+      </section>
+
+      <!-- SNAP -->
+      <section class="view" id="view-snap" aria-label="Snap a cat">
+        <form id="snapForm" class="snap-form" autocomplete="off">
+          <h1>Snap a cat</h1>
+
+          <div class="rules">
+            <strong>Cat Snap rules</strong>
+            <ul>
+              <li>Only cats you meet <em>out in the world</em> — streets, trails, attractions, harbours.</li>
+              <li>No pets at home, no cats you own, no pet-shop or shelter listings.</li>
+              <li>Don't chase, feed without permission, or pick up the cat.</li>
+            </ul>
+          </div>
+
+          <label class="photo-drop" id="photoDrop">
+            <input type="file" accept="image/*" capture="environment" id="photoInput" hidden />
+            <div class="photo-preview" id="photoPreview">
+              <span class="photo-icon">📷</span>
+              <span>Tap to take or upload a photo</span>
+              <span class="muted small">No photo? We'll sketch one from the coat details.</span>
+            </div>
+          </label>
+
+          <div class="field">
+            <label for="catName">Name or nickname</label>
+            <input id="catName" required maxlength="40" placeholder="e.g. Admiral Whiskers" />
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="coat">Coat</label>
+              <select id="coat"></select>
+            </div>
+            <div class="field">
+              <label for="eyes">Eyes</label>
+              <select id="eyes"></select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Where did you find them?</label>
+            <div class="habitat-picker" id="habitatPicker"></div>
+          </div>
+
+          <div class="field">
+            <label for="spot">Spot name</label>
+            <input id="spot" maxlength="60" placeholder="e.g. Lighthouse trail, north gate" required />
+          </div>
+
+          <div class="field">
+            <label>Rate this cat</label>
+            <div class="rating-grid" id="ratingGrid"></div>
+          </div>
+
+          <div class="field">
+            <label>Personality</label>
+            <div class="tag-picker" id="tagPicker"></div>
+          </div>
+
+          <div class="field">
+            <label for="notes">Field notes</label>
+            <textarea id="notes" rows="3" maxlength="400" placeholder="What were they doing? Any distinguishing marks?"></textarea>
+          </div>
+
+          <label class="confirm">
+            <input type="checkbox" id="wildConfirm" required />
+            <span>I met this cat outside / in public, and it isn't my pet or someone's indoor cat.</span>
+          </label>
+
+          <div class="loc-line muted small" id="snapLoc">Locating…</div>
+
+          <button type="submit" class="primary-btn">Post snap</button>
+        </form>
+      </section>
+
+      <!-- CATDEX -->
+      <section class="view" id="view-dex" aria-label="Your Catdex">
+        <div class="dex-head">
+          <div class="avatar">😼</div>
+          <div>
+            <h1 id="dexName">You</h1>
+            <p class="muted" id="dexSub">Cat spotter</p>
+          </div>
+        </div>
+        <div class="stats" id="dexStats"></div>
+        <h2>Badges</h2>
+        <div class="badges" id="dexBadges"></div>
+        <h2>Your snaps</h2>
+        <div class="dex-grid" id="dexGrid"></div>
+        <button class="ghost-btn" id="resetBtn">Reset prototype data</button>
+      </section>
+    </main>
+
+    <!-- Bottom nav -->
+    <nav class="tabbar">
+      <button data-view="feed" class="active"><span>🏠</span>Feed</button>
+      <button data-view="radar"><span>📡</span>Radar</button>
+      <button data-view="snap" class="snap-btn" aria-label="Snap a cat"><span>📸</span></button>
+      <button data-view="dex"><span>📖</span>Catdex</button>
+    </nav>
+
+    <!-- Detail sheet -->
+    <div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+    <article class="sheet" id="sheet" aria-modal="true" role="dialog" hidden></article>
+
+    <div class="toast" id="toast" role="status"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
