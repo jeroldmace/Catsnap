@@ -5,11 +5,11 @@
   // Places you can snap a cat. There is deliberately no "home" option:
   // Cat Snap is about cats you meet out in the world, not pets.
   const HABITATS = {
-    street:     { label: 'Street & Alley',   icon: '🏙️', weight: 0, bg: '#e8e2d6' },
-    shop:       { label: 'Shop & Market',    icon: '🧺', weight: 0, bg: '#f3e1c7' },
-    harbour:    { label: 'Harbour & Coast',  icon: '⚓', weight: 1, bg: '#d6e6ef' },
-    attraction: { label: 'Attraction',       icon: '🏛️', weight: 1, bg: '#e9dcef' },
-    wild:       { label: 'Wild & Trail',     icon: '🌲', weight: 2, bg: '#d9ead3' },
+    street:     { label: 'Street & Alley',   icon: '🏙️', color: '#8b7a64', weight: 0, bg: '#e8e2d6' },
+    shop:       { label: 'Shop & Market',    icon: '🧺', color: '#c2702a', weight: 0, bg: '#f3e1c7' },
+    harbour:    { label: 'Harbour & Coast',  icon: '⚓', color: '#2f78a8', weight: 1, bg: '#d6e6ef' },
+    attraction: { label: 'Attraction',       icon: '🏛️', color: '#8a58b0', weight: 1, bg: '#e9dcef' },
+    wild:       { label: 'Wild & Trail',     icon: '🌲', color: '#3e8a55', weight: 2, bg: '#d9ead3' },
   };
 
   const COATS = {
@@ -106,7 +106,7 @@
     const earFill = coat.pattern === 'pointed' ? acc : (coat.pattern === 'bicolor' ? acc : fur);
     const leftEye = eye.color, rightEye = eye.color2 || eye.color;
 
-    return `<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cat sketch">
+    return `<svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cat sketch">
       <defs><clipPath id="${id}"><ellipse cx="100" cy="118" rx="64" ry="56"/></clipPath></defs>
       <rect width="200" height="200" fill="${bg}"/>
       <circle cx="160" cy="40" r="22" fill="#fff" opacity=".35"/>
@@ -193,5 +193,50 @@
       comments: [] },
   ];
 
-  window.CatData = { HABITATS, COATS, EYES, RATING_KEYS, TAGS, RARITY, SEED, rarityOf, catSVG };
+
+  // ---------- Line icons (24px grid, stroke = currentColor) ----------
+  const ICON_PATHS = {
+    home:    '<path d="M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1h-5v-6h-5v6h-5a1 1 0 0 1-1-1z"/>',
+    radar:   '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M12 12l6.5-6.5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/>',
+    camera:  '<path d="M4 7.5h3.2l1.8-2.5h6l1.8 2.5H20a1 1 0 0 1 1 1V19a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8.5a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.2" r="3.8"/>',
+    book:    '<path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3"/><path d="M9 7.5h6"/>',
+    heart:   '<path d="M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.2a4.2 4.2 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/>',
+    comment: '<path d="M4.5 5h15a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1H10l-4.5 3.5v-3.5h-1a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/>',
+    eye:     '<path d="M2.5 12S6 6 12 6s9.5 6 9.5 6S18 18 12 18 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.8"/>',
+    pin:     '<path d="M12 21s-6.5-5.8-6.5-11.2a6.5 6.5 0 0 1 13 0C18.5 15.2 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.3"/>',
+    lock:    '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>',
+    crown:   '<path d="M3.5 8.5 8 12l4-6.5 4 6.5 4.5-3.5-1.8 10H5.3z"/>',
+    globe:   '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3.2 2.8 14.8 0 18M12 3c-2.8 3.2-2.8 14.8 0 18"/>',
+    bell:    '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z"/><path d="M10 20.5h4"/>',
+    check:   '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+    x:       '<path d="M6 6l12 12M18 6 6 18"/>',
+    locate:  '<circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>',
+    filter:  '<path d="M4 6h16M7 12h10M10 18h4"/>',
+    sparkle: '<path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8z"/>',
+    image:   '<rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M20.5 16l-5-5-8.5 8"/>',
+    ad:      '<rect x="3.5" y="6" width="17" height="12" rx="2"/><path d="M7.5 15l2-6 2 6M8.2 13h2.6M14 9v6h1.4a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2z"/>',
+    heartF:  '<path fill="currentColor" d="M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.2a4.2 4.2 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/>',
+  };
+  const PAW = '<svg class="paw" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="15.5" rx="5" ry="4.3"/><ellipse cx="5.6" cy="10" rx="2.1" ry="2.6"/><ellipse cx="9.4" cy="6.3" rx="2.1" ry="2.7"/><ellipse cx="14.6" cy="6.3" rx="2.1" ry="2.7"/><ellipse cx="18.4" cy="10" rx="2.1" ry="2.6"/></svg>';
+  function icon(name, cls) {
+    return `<svg class="i ${cls || ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[name] || ''}</svg>`;
+  }
+
+  // Mock advertisers shown to Free users (house-style native cards).
+  const ADS = [
+    { brand: 'Ridgeline Outfitters', line: 'Trail-ready daypacks for weekend wanderers.', cta: 'Shop daypacks', hue: '#2f6b4f' },
+    { brand: 'Harbour Lights Ferries', line: 'Island hopping all summer. Cat-spotting optional.', cta: 'See timetable', hue: '#1f5d8a' },
+    { brand: 'Paws Across Borders', line: 'Fund TNR programs that keep street cats healthy.', cta: 'Donate', hue: '#8a4b1f' },
+  ];
+
+  // Plus "travel mode": preview the radar in another city.
+  const CITIES = [
+    { key: 'istanbul', label: 'Istanbul', lat: 41.0256, lng: 28.9741 },
+    { key: 'kyoto',    label: 'Kyoto',    lat: 35.0037, lng: 135.7788 },
+    { key: 'valletta', label: 'Valletta', lat: 35.8989, lng: 14.5146 },
+    { key: 'lisbon',   label: 'Lisbon',   lat: 38.7139, lng: -9.1334 },
+    { key: 'hydra',    label: 'Hydra',    lat: 37.3496, lng: 23.4664 },
+  ];
+
+  window.CatData = { HABITATS, COATS, EYES, RATING_KEYS, TAGS, RARITY, SEED, rarityOf, catSVG, icon, PAW, ADS, CITIES };
 })();

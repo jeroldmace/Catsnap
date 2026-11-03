@@ -21,6 +21,8 @@ python3 -m http.server 8000
 | **Cat Radar** 📡 | A map centred on you that shows recently snapped cats. Filter by radius (1/3/10 km) and age (1 h / 24 h / 7 d). Pins snapped in the last hour pulse. Pins are colour-coded by rarity, and there's a list of nearby cats sorted by distance. |
 | **Snap** 📸 | Take or upload a photo (it's resized on the device). You can also skip the photo and get an auto-drawn sketch. Add a name, coat, eyes, habitat, spot name, 4-part paw rating, personality tags and field notes. |
 | **Catdex** 📖 | Your snaps, points, rank and badges (Trail Blazer, Culture Cat, Salty Paws, Legend Hunter…). |
+| **Plus (mock)** | Free vs Plus comparison, yearly/monthly pricing, and a trial button that switches the app into Plus mode (no payment). Free shows sponsored cards in the feed and radar. Plus removes ads and unlocks 10/25 km range, 7/30-day history, rarity filters and travel mode (Kyoto, Valletta, Lisbon…). |
+| **Featured find** | "Claude" sits at the top of the feed. Tap *Add Claude's real photo* to use a picture from your phone. |
 | **Cat detail** | Ratings, traits, notes, comments, an "I spotted them too" co-sighting button, and "Show on radar". |
 
 ### Keeping it about cats out in the world
