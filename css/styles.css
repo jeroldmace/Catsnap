@@ -19,7 +19,7 @@
   color: var(--ink);
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; background: #e9e3d8; }
+html, body { margin: 0; background: #e9e3d8; color-scheme: light; }
 button { font: inherit; color: inherit; cursor: pointer; }
 h1, h2, h3 { margin: 0 0 .4rem; line-height: 1.2; }
 h1 { font-size: 1.45rem; }
@@ -41,7 +41,7 @@ h3 { font-size: 1.05rem; }
 
 /* Top bar */
 .topbar {
-  position: sticky; top: 0; z-index: 500;
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 500;
   display: flex; align-items: center; justify-content: space-between;
   padding: 12px 16px;
   background: rgba(251, 247, 241, .92);
@@ -239,3 +239,19 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 .leaflet-container { font-family: inherit; }
+
+/* Radar scope (used when map tiles are unavailable) */
+#map.scope-mode { background: radial-gradient(circle at 50% 50%, #24314f 0%, #1a2440 70%, #141c33 100%); }
+#map.scope-mode { container-type: size; }
+.scope { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(100cqw, 100cqh); aspect-ratio: 1; }
+.scope .ring { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); aspect-ratio: 1; height: auto !important; border: 1px solid rgba(255,179,71,.35); border-radius: 50%; max-width: none; }
+.scope .ring span { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); font-size: .62rem; color: rgba(255,214,170,.75); font-variant-numeric: tabular-nums; }
+.scope .axis { position: absolute; background: rgba(255,179,71,.18); }
+.scope .axis.h { left: 0; right: 0; top: 50%; height: 1px; }
+.scope .axis.v { top: 0; bottom: 0; left: 50%; width: 1px; }
+.scope .compass { position: absolute; top: 52px; left: 50%; transform: translateX(-50%); color: #ffd6aa; font-weight: 800; font-size: .75rem; }
+.scope-me { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.scope-pin { position: absolute; transform: translate(-50%, -50%); padding: 0; cursor: pointer; z-index: 2; }
+.scope-pin.focus { z-index: 3; outline: 3px solid #fff; outline-offset: 2px; }
+#map.scope-mode + .radar-sweep { mix-blend-mode: screen; }
+.ghost-btn.armed { color: #c0392b; border-color: #e8a29a; }

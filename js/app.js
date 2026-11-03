@@ -251,9 +251,10 @@
   // ---------- Radar ----------
   function ensureMap() {
     if (state.map) return;
-    if (!window.L) {
-      $('#map').innerHTML = '<p class="empty">Map library could not load (offline?). The nearby list still works.</p>';
-      state.map = { invalidateSize() {}, setView() {} , fake: true };
+    if (!window.L || window.CATSNAP_SCOPE) {
+      // No map tiles available (offline or sandboxed): draw a radar scope instead.
+      $('#map').classList.add('scope-mode');
+      state.map = { invalidateSize() {}, setView() {}, fake: true };
       return;
     }
     const map = L.map('map', { zoomControl: false, attributionControl: true }).setView([state.center.lat, state.center.lng], 14);
@@ -290,7 +291,8 @@
         </div>
       </li>`).join('') : '<li class="empty">No recent cats in range. Try a wider radius or longer time window.</li>';
 
-    if (!state.map || state.map.fake) return;
+    if (!state.map) return;
+    if (state.map.fake) { renderScope(list); return; }
     const map = state.map, layer = state.mapLayer;
     layer.clearLayers();
     state.markers = {};
@@ -317,6 +319,22 @@
     });
   }
 
+  function renderScope(list) {
+    const c = state.center, R = state.radiusKm;
+    const kx = 111 * Math.cos((c.lat * Math.PI) / 180);
+    const rings = [0.25, 0.5, 0.75, 1].map((f) => `
+      <div class="ring" style="width:${f * 90}%;height:${f * 90}%"><span>${fmtDist(R * f)}</span></div>`).join('');
+    const pins = list.map((s) => {
+      const x = 50 + (((s.lng - c.lng) * kx) / R) * 45;
+      const y = 50 - (((s.lat - c.lat) * 111) / R) * 45;
+      const fresh = Date.now() - s.ts < 3600000;
+      return `<button class="cat-pin scope-pin ${s.rarity.cls} ${fresh ? 'fresh' : ''} ${state.focusId === s.id ? 'focus' : ''}"
+        style="left:${x}%;top:${y}%" data-open="${s.id}" aria-label="${esc(s.name)}, ${fmtDist(s.dist)} away">${artHTML(s)}</button>`;
+    }).join('');
+    $('#map').innerHTML = `<div class="scope">${rings}<div class="axis h"></div><div class="axis v"></div>
+      <span class="compass">N</span><div class="me-pin scope-me"></div>${pins}</div>`;
+  }
+
   function focusOnRadar(id) {
     const s = getSnap(id);
     closeDetail();
@@ -325,6 +343,8 @@
     const ageH = (Date.now() - s.ts) / 3600000;
     if (ageH > state.maxAgeH) setAge(ageH > 24 ? 168 : 24);
     showView('radar');
+    state.focusId = id;
+    renderRadar();
     setTimeout(() => {
       if (state.map.fake) return;
       state.map.setView([s.lat, s.lng], 16);
@@ -602,8 +622,18 @@
     });
     $('#snapForm').addEventListener('submit', submitSnap);
 
-    $('#resetBtn').addEventListener('click', () => {
-      if (!confirm('Clear your snaps, likes and comments from this browser?')) return;
+    // Two-tap confirm (browser confirm() dialogs are blocked in some embeds)
+    let resetArmed = null;
+    $('#resetBtn').addEventListener('click', (e) => {
+      const btn = e.currentTarget;
+      if (!resetArmed) {
+        btn.textContent = 'Tap again to delete your snaps, likes and comments';
+        btn.classList.add('armed');
+        resetArmed = setTimeout(() => { resetArmed = null; btn.textContent = 'Reset prototype data'; btn.classList.remove('armed'); }, 4000);
+        return;
+      }
+      clearTimeout(resetArmed); resetArmed = null;
+      btn.textContent = 'Reset prototype data'; btn.classList.remove('armed');
       store.userSnaps = []; store.interactions = {};
       saveStore(); refreshAll(); toast('Prototype data reset');
     });
