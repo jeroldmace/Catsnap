@@ -7,7 +7,12 @@ The Android app is the same web app wrapped with [Capacitor](https://capacitorjs
 2. Open it. If Android asks, allow **Install unknown apps** for your browser or file manager.
 3. Open **Cat Snap**. Allow **location** (for the radar and snap pins) and **camera** when asked.
 
-To update later, install the newer APK over the old one. Your snaps are kept as long as the new APK is signed with the same key (see Signing below). Save a backup first anyway (Catdex → Settings → Save backup).
+## Updating to a newer APK
+Each field-test APK is signed with a new key, so Android won't install it over the old one. To update without losing anything:
+1. In the old app: **Catdex → Settings → Save backup**, and save the file somewhere outside the app (Drive, Files, email).
+2. Uninstall Cat Snap. This deletes the snaps stored inside the app, which is why step 1 matters.
+3. Install the new APK and open it.
+4. **Catdex → Settings → Restore backup** and pick the file from step 1. Your snaps, photos, likes, comments and settings come back.
 
 ## Differences from the web version
 - **Save backup** opens Android's share sheet, so you can save the file to Drive or Files or email it.
@@ -22,13 +27,5 @@ npm run android:apk   # builds the web app, syncs it into android/, builds and c
 ```
 
 ## Signing
-APKs must be signed with the **same key** to install over each other without losing data.
-- The key isn't stored in git. Put it anywhere safe and point `android/keystore.properties` at it (that file is git-ignored):
-  ```
-  storeFile=/absolute/path/to/catsnap-fieldtest.jks
-  storePassword=…
-  keyAlias=catsnap
-  keyPassword=…
-  ```
-- Without `keystore.properties`, release builds are signed with the debug key. They install fine, but can't update an APK signed with a different key: you'd uninstall first, so back up before doing that.
-- For the Play Store, create a separate private upload key.
+Field-test APKs aren't signed with a kept key; each build gets a fresh one (see *Updating* above).
+If you later want updates to install in place, create a private key, keep it out of git, and point a git-ignored `android/keystore.properties` at it (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). `android/app/build.gradle` picks it up automatically. Use a separate private upload key for the Play Store.

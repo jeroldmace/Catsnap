@@ -26,6 +26,7 @@ Put these in a comment on a snap, or keep a notes file:
 
 ## Known limits of the field-test build
 - Data stays on one phone. There are no accounts and no shared feed yet. Back up regularly.
+- Android APK updates mean backup → uninstall → install → restore (see docs/ANDROID.md).
 - Demo cats (including Claude) are placed around your first GPS fix. They aren't real sightings.
 - iOS may clear data for web apps that aren't opened for several weeks. Installing to the home screen and backing up reduce the risk.
 - Plus and the ads are mock-ups. No payment, and no real advertisers.
