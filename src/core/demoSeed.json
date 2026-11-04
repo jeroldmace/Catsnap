@@ -1,0 +1,345 @@
+[
+ {
+  "id": "s1",
+  "name": "Captain Biscuit",
+  "coat": "orange",
+  "eyes": "amber",
+  "habitat": "harbour",
+  "spot": "Old ferry pier, bollard #4",
+  "dx": 0.4,
+  "dy": -0.3,
+  "ago": 18,
+  "author": "mira_on_foot",
+  "sightings": 6,
+  "likes": 42,
+  "ratings": {
+   "charm": 5,
+   "fluff": 4,
+   "pose": 5,
+   "friendly": 4
+  },
+  "tags": [
+   "Chonky",
+   "Sunbather",
+   "Guardian"
+  ],
+  "notes": "Supervises every ferry docking. Accepts head scratches from fishermen only.",
+  "comments": [
+   {
+    "user": "deckhand_lu",
+    "text": "He was here at 6am too, judging the catch."
+   }
+  ]
+ },
+ {
+  "id": "s2",
+  "name": "The Abbess",
+  "coat": "calico",
+  "eyes": "green",
+  "habitat": "attraction",
+  "spot": "Cathedral cloister garden",
+  "dx": -0.8,
+  "dy": 0.5,
+  "ago": 55,
+  "author": "pilgrim_pete",
+  "sightings": 3,
+  "likes": 87,
+  "ratings": {
+   "charm": 5,
+   "fluff": 3,
+   "pose": 5,
+   "friendly": 2
+  },
+  "tags": [
+   "Regal",
+   "Shy"
+  ],
+  "notes": "Sits exactly on the sundial at noon. The guides say she has lived here 9 years.",
+  "comments": [
+   {
+    "user": "mira_on_foot",
+    "text": "Legend. Saw her last spring too."
+   }
+  ]
+ },
+ {
+  "id": "s3",
+  "name": "Moss",
+  "coat": "brown",
+  "eyes": "green",
+  "habitat": "wild",
+  "spot": "Ridge trail, km 3 marker",
+  "dx": 2.1,
+  "dy": 1.4,
+  "ago": 140,
+  "author": "trailcat_tom",
+  "sightings": 1,
+  "likes": 61,
+  "ratings": {
+   "charm": 4,
+   "fluff": 4,
+   "pose": 3,
+   "friendly": 1
+  },
+  "tags": [
+   "Feral-ish",
+   "Ear-tipped"
+  ],
+  "notes": "Watched from a boulder for a full minute then vanished into the ferns. TNR ear tip.",
+  "comments": []
+ },
+ {
+  "id": "s4",
+  "name": "Señor Bigotes",
+  "coat": "tuxedo",
+  "eyes": "amber",
+  "habitat": "shop",
+  "spot": "Night market, spice stall",
+  "dx": -0.2,
+  "dy": -0.6,
+  "ago": 35,
+  "author": "snackhunter",
+  "sightings": 22,
+  "likes": 120,
+  "ratings": {
+   "charm": 5,
+   "fluff": 3,
+   "pose": 4,
+   "friendly": 5
+  },
+  "tags": [
+   "Chatty",
+   "Chonky"
+  ],
+  "notes": "Stall owner says he is \"head of security\". Meows at anyone who lingers.",
+  "comments": [
+   {
+    "user": "pilgrim_pete",
+    "text": "Everybody has a Bigotes snap but I still love him."
+   }
+  ]
+ },
+ {
+  "id": "s5",
+  "name": "Ghost",
+  "coat": "white",
+  "eyes": "odd",
+  "habitat": "attraction",
+  "spot": "Castle ruins, west tower",
+  "dx": 1.2,
+  "dy": -1.6,
+  "ago": 300,
+  "author": "ruin_rambler",
+  "sightings": 2,
+  "likes": 203,
+  "ratings": {
+   "charm": 5,
+   "fluff": 5,
+   "pose": 5,
+   "friendly": 2
+  },
+  "tags": [
+   "Regal",
+   "Shy",
+   "Guardian"
+  ],
+  "notes": "One blue eye, one gold. Only appears near closing time.",
+  "comments": [
+   {
+    "user": "trailcat_tom",
+    "text": "Odd-eyed?! Heading there this weekend."
+   },
+   {
+    "user": "snackhunter",
+    "text": "Unreal find."
+   }
+  ]
+ },
+ {
+  "id": "s6",
+  "name": "Pistachio",
+  "coat": "grey",
+  "eyes": "green",
+  "habitat": "street",
+  "spot": "Stairway alley behind the bakery",
+  "dx": 0.15,
+  "dy": 0.25,
+  "ago": 8,
+  "author": "mira_on_foot",
+  "sightings": 11,
+  "likes": 18,
+  "ratings": {
+   "charm": 4,
+   "fluff": 3,
+   "pose": 4,
+   "friendly": 4
+  },
+  "tags": [
+   "Curious",
+   "Mischief"
+  ],
+  "notes": "Stole half a croissant and looked extremely proud.",
+  "comments": []
+ },
+ {
+  "id": "s7",
+  "name": "Lady Marmalade",
+  "coat": "tortie",
+  "eyes": "copper",
+  "habitat": "harbour",
+  "spot": "Lighthouse steps",
+  "dx": 3.4,
+  "dy": -0.4,
+  "ago": 900,
+  "author": "saltwater_sam",
+  "sightings": 4,
+  "likes": 54,
+  "ratings": {
+   "charm": 4,
+   "fluff": 4,
+   "pose": 5,
+   "friendly": 3
+  },
+  "tags": [
+   "Sunbather",
+   "Sleepy"
+  ],
+  "notes": "Curled up on the warm stone at the base of the lighthouse.",
+  "comments": []
+ },
+ {
+  "id": "s8",
+  "name": "Professor Paws",
+  "coat": "siamese",
+  "eyes": "blue",
+  "habitat": "attraction",
+  "spot": "Botanical garden glasshouse",
+  "dx": -1.6,
+  "dy": -1.1,
+  "ago": 75,
+  "author": "fern_fanatic",
+  "sightings": 5,
+  "likes": 77,
+  "ratings": {
+   "charm": 5,
+   "fluff": 3,
+   "pose": 4,
+   "friendly": 4
+  },
+  "tags": [
+   "Chatty",
+   "Curious"
+  ],
+  "notes": "Follows the 2pm tour group and yells at the orchids.",
+  "comments": [
+   {
+    "user": "ruin_rambler",
+    "text": "The garden staff call him \"the Director\"."
+   }
+  ]
+ },
+ {
+  "id": "s9",
+  "name": "Shadow of the Pines",
+  "coat": "black",
+  "eyes": "amber",
+  "habitat": "wild",
+  "spot": "Pine forest campground",
+  "dx": -4.5,
+  "dy": 3.2,
+  "ago": 1500,
+  "author": "trailcat_tom",
+  "sightings": 1,
+  "likes": 39,
+  "ratings": {
+   "charm": 4,
+   "fluff": 4,
+   "pose": 2,
+   "friendly": 1
+  },
+  "tags": [
+   "Feral-ish",
+   "Battle scars"
+  ],
+  "notes": "Only visible as two glowing eyes until the campfire lit up.",
+  "comments": []
+ },
+ {
+  "id": "s10",
+  "name": "Domino",
+  "coat": "bicolor",
+  "eyes": "green",
+  "habitat": "street",
+  "spot": "Clock tower square bench",
+  "dx": 0.7,
+  "dy": 0.9,
+  "ago": 210,
+  "author": "snackhunter",
+  "sightings": 17,
+  "likes": 25,
+  "ratings": {
+   "charm": 3,
+   "fluff": 3,
+   "pose": 4,
+   "friendly": 5
+  },
+  "tags": [
+   "Sleepy",
+   "Chonky"
+  ],
+  "notes": "Has claimed the bench. Pigeons give him a wide berth.",
+  "comments": []
+ },
+ {
+  "id": "s11",
+  "name": "Clementine",
+  "coat": "cream",
+  "eyes": "copper",
+  "habitat": "shop",
+  "spot": "Used bookshop window",
+  "dx": -0.5,
+  "dy": 1.3,
+  "ago": 3000,
+  "author": "fern_fanatic",
+  "sightings": 8,
+  "likes": 33,
+  "ratings": {
+   "charm": 4,
+   "fluff": 5,
+   "pose": 3,
+   "friendly": 3
+  },
+  "tags": [
+   "Sleepy",
+   "Sunbather"
+  ],
+  "notes": "Sleeping on the poetry section. Visible from the street.",
+  "comments": []
+ },
+ {
+  "id": "s12",
+  "name": "Vineyard Vic",
+  "coat": "orange",
+  "eyes": "green",
+  "habitat": "wild",
+  "spot": "Hillside vineyard lane",
+  "dx": 6.8,
+  "dy": 4.1,
+  "ago": 6000,
+  "author": "saltwater_sam",
+  "sightings": 2,
+  "likes": 46,
+  "ratings": {
+   "charm": 5,
+   "fluff": 4,
+   "pose": 4,
+   "friendly": 3
+  },
+  "tags": [
+   "Battle scars",
+   "Guardian"
+  ],
+  "notes": "Patrols the rows at dusk. Probably the reason there are no mice.",
+  "comments": []
+ }
+]

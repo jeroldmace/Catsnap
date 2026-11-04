@@ -1,44 +1,55 @@
-# 🐾 Cat Snap — prototype
+# 🐾 Cat Snap
 
-A social app for photographing, describing and rating **cats you meet out in the world**: strays, trail cats, harbour cats, temple and museum residents, market mousers. Pets at home are deliberately out of scope.
+A field log for **cats you meet out in the world**: strays, trail cats, harbour cats, temple and museum residents, market mousers. You can snap them, rate them and track them on the Cat Radar. Pets at home are deliberately out of scope.
 
-## Run it
+This is the **field-test build (v0.5)**. It's an installable web app (PWA) that runs on your phone with real GPS, the real camera and a street map. It keeps all data on the phone. It's laid out so the same core can grow into a 1.0 with shared accounts and a native app (see [docs/ROADMAP.md](docs/ROADMAP.md)).
 
-No build step. Serve the folder with any static server and open it on your phone or in a mobile-sized browser window:
+## Get it on your phone
+
+The app needs HTTPS for GPS and the camera, so it has to be hosted. Pick one option:
+
+| Option | Steps | Works for private repos |
+|---|---|---|
+| **Netlify** (recommended) | Sign in at netlify.com with GitHub → *Add new site → Import from Git* → pick `catsnap` and this branch. `netlify.toml` already sets the build. | Yes, free |
+| **GitHub Pages** | Merge to `main`, then *Settings → Pages → Source: GitHub Actions*. The workflow in `.github/workflows/deploy-pages.yml` builds, tests and deploys. | Public repos on the free plan |
+| **Your computer** | `npm install` then `npm run dev:phone`. Open the `https://<your-computer-ip>:5173` address on your phone (same Wi-Fi) and accept the self-signed certificate warning. | n/a |
+
+On the phone, use **Share → Add to Home Screen** (iPhone, Safari) or **⋮ → Install app** (Android, Chrome). It then opens full screen and works offline.
+
+See [docs/FIELD_TESTING.md](docs/FIELD_TESTING.md) for a test checklist.
+
+## Features
+
+- **Feed:** featured find (Claude 🧡), sort by Recent / Nearby / Top rated / Rare finds, filter by habitat.
+- **Snap:** take a photo or pick one from the library, then add the name, coat, eyes, habitat, spot, 4-part paw rating, personality and notes. Requires the "met outside, not a pet" confirmation. You can edit or delete it later.
+- **Saw them again:** log a repeat sighting instead of creating a duplicate. The radar shows where a cat was last seen, and repeat sightings feed into rarity.
+- **Cat Radar:** an OpenStreetMap street map or a radar view, range and age filters, and a nearby list. Map tiles you've viewed are cached for offline use.
+- **Catdex:** your snaps, points, rank and badges.
+- **Plus (mock):** pricing screen, and Free vs Plus limits (ads; 10/25 km range; 7/30-day history; rarity filter; travel mode). No payment is taken.
+- **Settings:** username, demo cats on/off, Plus toggle, location status, storage status, **backup/restore** (a JSON file that includes photos), and delete all data.
+
+### Cat safety and privacy
+- Every saved location is blurred to a random point 30–100 m away. The exact GPS position is never stored.
+- Photos are re-encoded on the phone, which strips EXIF metadata, including the GPS position phones embed.
+- There's no "home" habitat, and posting requires a "not a pet" confirmation.
+
+## Development
 
 ```bash
-python3 -m http.server 8000
-# then open http://localhost:8000
+npm install
+npm run dev        # local dev server
+npm run dev:phone  # HTTPS on your network, for testing on a phone
+npm test           # unit tests (core rules, geo, storage)
+npm run build      # type-check + production build into dist/
 ```
 
-> Geolocation needs `localhost` or HTTPS. If location is denied, the radar falls back to a demo city (Istanbul).
-
-## What's in the prototype
-
-| Area | What it does |
-|---|---|
-| **Feed** | Sort snaps by Recent / Nearby / Top rated / Rare finds, and filter by habitat. Like, comment, open details. |
-| **Cat Radar** 📡 | A map centred on you that shows recently snapped cats. Filter by radius (1/3/10 km) and age (1 h / 24 h / 7 d). Pins snapped in the last hour pulse. Pins are colour-coded by rarity, and there's a list of nearby cats sorted by distance. |
-| **Snap** 📸 | Take or upload a photo (it's resized on the device). You can also skip the photo and get an auto-drawn sketch. Add a name, coat, eyes, habitat, spot name, 4-part paw rating, personality tags and field notes. |
-| **Catdex** 📖 | Your snaps, points, rank and badges (Trail Blazer, Culture Cat, Salty Paws, Legend Hunter…). |
-| **Plus (mock)** | Free vs Plus comparison, yearly/monthly pricing, and a trial button that switches the app into Plus mode (no payment). Free shows sponsored cards in the feed and radar. Plus removes ads and unlocks 10/25 km range, 7/30-day history, rarity filters and travel mode (Kyoto, Valletta, Lisbon…). |
-| **Featured find** | "Claude" sits at the top of the feed. Tap *Add Claude's real photo* to use a picture from your phone. |
-| **Cat detail** | Ratings, traits, notes, comments, an "I spotted them too" co-sighting button, and "Show on radar". |
-
-### Keeping it about cats out in the world
-- **No "home" habitat.** The only choices are Street & Alley, Shop & Market, Harbour & Coast, Attraction, and Wild & Trail.
-- **Posting rules** sit at the top of the Snap form, and you have to tick a confirmation saying the cat isn't your pet or someone's indoor cat.
-- **Rarity rewards hard finds.** Remote habitats score higher. Cats with few sightings score higher. Cats that lots of people have logged drift toward *Common*. Points go Common 10 → Uncommon 25 → Rare 50 → Legendary 100.
-- **Cat safety.** Posted locations are blurred by about 100 m so no one can find a specific cat's exact spot.
-
-## Tech notes
-- Plain HTML/CSS/JS. Maps use [Leaflet](https://leafletjs.com/) with OpenStreetMap tiles.
-- Data is stored in the browser's `localStorage`. The demo sightings are placed around your current location, so the radar always has something to show.
-- Files: `index.html`, `css/styles.css`, `js/data.js` (habitats, coats, rarity rules, demo sightings, SVG cat sketches), `js/app.js` (UI logic).
-
-## Possible next steps
-- Real backend and accounts (e.g. Supabase or Firebase) with photo storage
-- Use photo EXIF/GPS to check location, and an on-device "is this a cat / is this indoors?" check
-- Group repeat sightings of the same cat automatically (by coat, location and photo similarity)
-- Moderation and reporting, plus hiding sensitive locations (colonies, TNR sites)
-- Wrap as a PWA or a React Native app for camera-first capture
+### Project layout
+```
+src/core/   Pure TypeScript: types, catalog, rarity and points rules, geo, demo content, cat sketches.
+            No browser APIs, so it can be reused by a native app or a server.
+src/data/   Repository interface + IndexedDB implementation, photo processing, backup/restore.
+            Swap in a Supabase repository later without touching the UI.
+src/ui/     React screens and components, app state (store.tsx), styles.
+tests/      Vitest unit tests.
+prototype/  The original single-file clickable prototype, kept for reference.
+```
