@@ -50,12 +50,12 @@
 
   // The featured example: a cat the user named Claude.
   const CLAUDE = {
-    id: 'claude', name: 'Claude', coat: 'orange', eyes: 'amber', habitat: 'street',
-    spot: 'Our laneway, by the garden gate', dx: 0.08, dy: 0.12, ago: 25, sightings: 2, likes: 64,
-    ratings: { charm: 5, fluff: 4, pose: 5, friendly: 4 }, tags: ['Curious', 'Chatty', 'Guardian'],
-    notes: 'We named this one Claude. Turns up most evenings to inspect the garden and supervise anyone who stops to say hello.',
-    comments: [{ user: 'mira_on_foot', text: 'Claude! Instant favourite.' }, { user: 'snackhunter', text: 'That pose is unreal.' }],
-    featured: true,
+    id: 'claude', name: 'Claude', coat: 'orange', eyes: 'amber', habitat: 'harbour',
+    spot: 'Riverside boardwalk, by the cat park', dx: 0.08, dy: 0.12, ago: 25, sightings: 2, likes: 64,
+    ratings: { charm: 5, fluff: 4, pose: 4, friendly: 5 }, tags: ['Curious', 'Chatty', 'Sunbather'],
+    notes: 'We named this one Claude. Strolled up on the wet boardwalk, climbed straight onto a knee and demanded chin scratches. Tail curled up the whole time.',
+    comments: [{ user: 'mira_on_foot', text: 'Claude! Instant favourite.' }, { user: 'snackhunter', text: 'That tail curl is unreal.' }],
+    featured: true, defaultPhoto: 'img/claude.jpg',
   };
 
   // ---------- Helpers ----------
@@ -126,7 +126,7 @@
       lng: c.lng + s.dx / (111 * Math.cos((c.lat * Math.PI) / 180)),
       ts: now - s.ago * 60000,
     });
-    const claude = { ...place(CLAUDE), user: store.username, mine: true, photo: store.claudePhoto || null };
+    const claude = { ...place(CLAUDE), user: store.username, mine: true, photo: store.claudePhoto || CLAUDE.defaultPhoto };
     const seed = SEED.map((s) => ({ ...place(s), mine: false }));
     const mine = store.userSnaps.map((s) => ({ ...s, mine: true }));
     state.snaps = [claude, ...mine, ...seed].map((s) => {
@@ -196,7 +196,7 @@
           <p class="feat-quote">${esc(s.notes)}</p>
         </div>
       </button>
-      ${s.photo ? '' : `<button class="pill-btn dark" data-claude-photo style="margin:-4px 0 14px">${icon('image')} Add Claude's real photo</button>`}`;
+`;
   }
 
   function renderFeed() {
@@ -303,7 +303,7 @@
         <div class="sheet-actions">
           <button class="pill-btn ${s.liked ? 'liked' : ''}" data-like="${s.id}">${icon(s.liked ? 'heartF' : 'heart')}${s.likes}</button>
           ${s.mine
-            ? (s.id === 'claude' ? `<button class="pill-btn dark" data-claude-photo>${icon('image')}${s.photo ? 'Change photo' : "Add Claude's photo"}</button>` : '')
+            ? (s.id === 'claude' ? `<button class="pill-btn dark" data-claude-photo>${icon('image')}Change photo</button>` : '')
             : `<button class="pill-btn ${s.spotted ? 'on' : ''}" data-spot="${s.id}">${icon(s.spotted ? 'check' : 'eye')}${s.spotted ? 'You spotted them' : 'I spotted them too · +5'}</button>`}
           <button class="pill-btn" data-locate="${s.id}">${icon('radar')}Show on radar</button>
         </div>
