@@ -12,6 +12,7 @@ import { RarityBadge } from '../components/bits';
 import { Icon } from '../components/Icon';
 import { catSVG } from '../../core/catArt';
 import { HABITATS } from '../../core/catalog';
+import { locationMessage } from '../../data/location';
 
 export interface RadarFilters { radiusKm: number; ageH: number; minTier: number; focusId: string | null }
 interface Props { filters: RadarFilters; setFilters: (f: RadarFilters) => void; onOpen: (id: string) => void; onPlus: (feature?: string) => void }
@@ -46,7 +47,9 @@ export function Radar({ filters, setFilters, onOpen, onPlus }: Props) {
   const status = travel ? `Travel mode · ${travel.label}`
     : geo.status === 'live' ? `GPS live · ±${Math.round(geo.accuracy ?? 0)} m`
     : geo.status === 'pending' ? 'Finding you…'
-    : geo.status === 'denied' ? 'Location blocked · demo city' : 'No GPS · demo city';
+    : geo.status === 'searching' ? 'Searching for GPS…'
+    : geo.status === 'off' ? 'Location off · demo city'
+    : geo.status === 'denied' ? 'Location blocked · demo city' : 'No location · demo city';
 
   const locked = (ok: boolean) => !settings.plus && !ok;
   const seg = <T extends number>(values: readonly T[], current: T, allowed: readonly number[], label: (v: T) => string, set: (v: T) => void, feature: string) =>
@@ -69,10 +72,17 @@ export function Radar({ filters, setFilters, onOpen, onPlus }: Props) {
         </div>
         <button className="icon-btn" title="Centre on me" aria-label="Centre on me" onClick={() => {
           setTravel(null); setFilters({ ...filters, focusId: null }); requestLocation();
-          if (geo.status === 'denied') toast('Location is blocked. Allow it for this site in your browser settings.');
+          if (geo.status !== 'live') toast(locationMessage(geo.status, geo.accuracy, !!geo.point));
         }}><Icon name="locate" /></button>
       </div>
 
+      {!travel && geo.status !== 'live' && geo.status !== 'pending' && (
+        <div className="loc-help">
+          <Icon name="locate" />
+          <span>{locationMessage(geo.status, geo.accuracy, !!geo.point)} Until then the radar shows the demo city.</span>
+          <button className="pill-btn" onClick={requestLocation}>Retry</button>
+        </div>
+      )}
       <div className="view-toggle seg">
         <button className={settings.radarView === 'map' ? 'active' : ''} onClick={() => updateSettings({ radarView: 'map' })}><Icon name="map" />Map</button>
         <button className={settings.radarView === 'scope' ? 'active' : ''} onClick={() => updateSettings({ radarView: 'scope' })}><Icon name="radar" />Radar</button>

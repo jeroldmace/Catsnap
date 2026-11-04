@@ -5,6 +5,7 @@ import { rarityOf } from '../../core/rules';
 import type { CoatKey, EyeKey, HabitatKey, Ratings } from '../../core/types';
 import { useStore, type SnapDraft } from '../store';
 import { Icon, Paw } from '../components/Icon';
+import { locationMessage } from '../../data/location';
 
 interface Props { editId: string | null; onDone: (id: string) => void; onCancelEdit: () => void }
 
@@ -14,7 +15,7 @@ const blank = (): SnapDraft => ({
 });
 
 export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
-  const { snaps, addSnap, editSnap, geo, toast } = useStore();
+  const { snaps, addSnap, editSnap, geo, toast, requestLocation } = useStore();
   const editing = editId ? snaps.find((s) => s.id === editId && s.source === 'mine') ?? null : null;
   const [d, setD] = useState<SnapDraft>(blank);
   const [photo, setPhoto] = useState<Blob | null | undefined>(undefined); // undefined = unchanged (edit)
@@ -77,9 +78,9 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
   };
 
   const locLine = editing ? 'Location stays where you first snapped this cat.'
-    : geo.status === 'live' ? `Pinned at your GPS position (±${Math.round(geo.accuracy ?? 0)} m), blurred about 100 m before saving.`
-    : geo.status === 'pending' ? 'Finding your location…'
-    : "Location isn't available, so this snap will be pinned in the demo city. Allow location for real pins.";
+    : geo.point ? `Pinned at your GPS position (±${Math.round(geo.accuracy ?? 0)} m), blurred about 100 m before saving.`
+    : `${locationMessage(geo.status, geo.accuracy, false)} You can fill in the entry meanwhile; posting needs a location.`;
+  const locBad = !editing && !geo.point && (geo.status === 'off' || geo.status === 'denied');
 
   return (
     <section className="view" aria-label={editing ? 'Edit snap' : 'Snap a cat'}>
@@ -186,7 +187,9 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
           </label>
         )}
 
-        <div className="loc-line"><Icon name="pin" /><span>{locLine}</span></div>
+        <div className={`loc-line ${locBad ? 'warn' : ''}`}><Icon name="pin" /><span>{locLine}</span>
+          {!editing && !geo.point && <button type="button" className="pill-btn" onClick={requestLocation}>Retry</button>}
+        </div>
         {!editing && <p className="forecast">This looks like a <strong>{forecast.name}</strong> find: +{forecast.points} pts.</p>}
 
         <button type="submit" className="primary-btn" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Post snap'}</button>

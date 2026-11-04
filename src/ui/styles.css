@@ -488,3 +488,9 @@ input, select, textarea { font: inherit; color: var(--ink); width: 100%; border:
 .welcome-card li .i { color: var(--accent-deep); margin-top: 1px; }
 .leaflet-container .leaflet-control-attribution { font-size: 10px; }
 .radar-wrap .radar-status { z-index: 500; }
+
+.loc-help { display: flex; gap: 10px; align-items: center; background: #fff7ec; border: 1px solid #f3cf9c; border-radius: var(--radius-s); padding: 10px 12px; margin-bottom: 10px; font-size: .84rem; color: var(--ink-2); }
+.loc-help > .i { color: var(--accent-deep); flex: none; }
+.loc-help > span { flex: 1; min-width: 0; }
+.loc-help .pill-btn, .loc-line .pill-btn { flex: none; padding: 6px 12px; }
+.loc-line.warn, .muted.warn { color: var(--danger); }

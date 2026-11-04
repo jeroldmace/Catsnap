@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { Icon } from '../components/Icon';
 import { isNative } from '../../data/platform';
+import { locationMessage } from '../../data/location';
 
 export function Settings({ onBack }: { onBack: () => void }) {
   const { settings, updateSettings, snaps, persisted, exportData, importData, resetAll, toast, geo, requestLocation } = useStore();
@@ -48,10 +49,8 @@ export function Settings({ onBack }: { onBack: () => void }) {
 
         <div className="set-group">
           <div className="set-row">
-            <span><strong>Location</strong><span className="muted small">
-              {geo.status === 'live' ? `GPS live, accurate to about ${Math.round(geo.accuracy ?? 0)} m.` :
-                geo.status === 'denied' ? 'Blocked. Allow location for this site in your browser settings, then tap Retry.' :
-                geo.status === 'pending' ? 'Waiting for GPS…' : 'Not available on this device.'}
+            <span><strong>Location</strong><span className={`muted small ${geo.status === 'off' || geo.status === 'denied' ? 'warn' : ''}`}>
+              {locationMessage(geo.status, geo.accuracy, !!geo.point)}
             </span></span>
             {geo.status !== 'live' && <button className="pill-btn" onClick={requestLocation}>Retry</button>}
           </div>

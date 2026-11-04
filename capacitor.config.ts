@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   server: { androidScheme: 'https' },
   android: {
     // Identify the app to OpenStreetMap's tile servers (their usage policy asks for this).
-    appendUserAgent: 'CatSnap/0.5 (field test)',
+    appendUserAgent: 'CatSnap/0.5.1 (field test)',
     adjustMarginsForEdgeToEdge: 'auto',
   },
 };

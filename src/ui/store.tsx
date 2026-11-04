@@ -5,11 +5,12 @@ import { overallScore, pointsFor, rarityOf, totalSightings, type Rarity } from '
 import { DEFAULT_SETTINGS, type Comment, type GeoPoint, type Interaction, type Settings, type Sighting, type Snap } from '../core/types';
 import { exportBackup, importBackup } from '../data/backup';
 import { saveFile } from '../data/platform';
+import { startLocation, type LocStatus } from '../data/location';
 import { createIdbRepository, requestPersistentStorage } from '../data/idbRepository';
 import type { Repository } from '../data/repository';
 import { processPhoto } from '../data/photos';
 
-export type GeoStatus = 'pending' | 'live' | 'denied' | 'unavailable';
+export type GeoStatus = LocStatus;
 export interface GeoState { status: GeoStatus; point: GeoPoint | null; accuracy: number | null; updatedAt: number | null }
 
 /** A snap plus everything derived for display. */
@@ -114,23 +115,28 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
   }, [reload, toast]);
 
   // ---- Location ----
-  const watchId = useRef<number | null>(null);
+  const stopLoc = useRef<(() => void) | null>(null);
+  const geoRef = useRef(geo);
+  geoRef.current = geo;
   const startWatch = useCallback(() => {
-    if (!('geolocation' in navigator)) { setGeo((g) => ({ ...g, status: 'unavailable' })); return; }
-    if (watchId.current != null) navigator.geolocation.clearWatch(watchId.current);
-    watchId.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const point = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setGeo({ status: 'live', point, accuracy: pos.coords.accuracy, updatedAt: pos.timestamp });
+    stopLoc.current?.();
+    setGeo((g) => (g.status === 'live' ? g : { ...g, status: 'pending' }));
+    stopLoc.current = startLocation(
+      (f) => {
+        const point = { lat: f.lat, lng: f.lng };
+        setGeo({ status: 'live', point, accuracy: f.accuracy, updatedAt: f.at });
         setDemoAnchor((a) => a ?? point);
       },
-      (err) => setGeo((g) => ({ ...g, status: err.code === err.PERMISSION_DENIED ? 'denied' : g.point ? 'live' : 'unavailable' })),
-      { enableHighAccuracy: true, maximumAge: 15000, timeout: 20000 },
+      // While we still have a recent fix, a slow GPS refresh isn't worth alarming anyone about.
+      (status) => setGeo((g) => ({ ...g, status: status === 'searching' && g.point ? 'live' : status })),
     );
   }, []);
   useEffect(() => {
     startWatch();
-    return () => { if (watchId.current != null) navigator.geolocation.clearWatch(watchId.current); };
+    // Coming back to the app (e.g. after turning Location on) retries automatically.
+    const onVisible = () => { if (document.visibilityState === 'visible' && geoRef.current.status !== 'live') startWatch(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { stopLoc.current?.(); document.removeEventListener('visibilitychange', onVisible); };
   }, [startWatch]);
 
   const here = useMemo(() => geo.point ?? { ...DEMO_CENTER }, [geo.point]);
@@ -182,8 +188,9 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
   }, [repo]);
 
   const addSnap = useCallback(async (draft: SnapDraft, photo: Blob | null) => {
+    if (!geo.point) throw new Error("Can't post yet: no location fix. Your entry is kept; tap Post again once the location line says GPS is live.");
     const t = Date.now();
-    const exact = geo.point ?? DEMO_CENTER;
+    const exact = geo.point;
     const snap: Snap = {
       ...draft,
       id: uid(),

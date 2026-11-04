@@ -1,7 +1,7 @@
 {
   "name": "catsnap",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.5.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,7 @@
     "@capacitor/android": "^7.4.4",
     "@capacitor/core": "^7.4.4",
     "@capacitor/filesystem": "^7.1.4",
+    "@capacitor/geolocation": "^7.1.4",
     "@capacitor/share": "^7.0.2",
     "idb": "8.0.0",
     "leaflet": "1.9.4",
