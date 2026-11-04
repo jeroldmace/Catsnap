@@ -5,6 +5,7 @@
 --   'private' - only you can see it
 -- Opt-in per sighting: delayed = true hides it from others for one hour.
 -- Delay timestamps are set by the server, so the app can't fake them.
+-- Existing policies are altered in place (same command, role and table).
 -- Likes, comments, sightings and photos are only visible on snaps you can see.
 
 -- ---------- Snap visibility ----------
@@ -40,9 +41,8 @@ create trigger snaps_set_shared_at
 create index snaps_shared_at_idx on public.snaps (shared_at desc) where visibility <> 'private';
 create index snaps_photo_path_idx on public.snaps (photo_path) where photo_path is not null;
 
-drop policy "snaps are visible to signed-in users" on public.snaps;
-create policy "see own snaps and others' shared snaps" on public.snaps
-  for select to authenticated
+alter policy "snaps are visible to signed-in users" on public.snaps rename to "see own snaps and others' shared snaps";
+alter policy "see own snaps and others' shared snaps" on public.snaps
   using (
     owner_id = (select auth.uid())
     or visibility = 'shared'
@@ -61,9 +61,8 @@ alter table public.sightings
   add column delayed boolean not null default false,
   add column recorded_at timestamptz not null default now();   -- server time
 
-drop policy "sightings are visible to signed-in users" on public.sightings;
-create policy "see own sightings and others' sightings on visible snaps" on public.sightings
-  for select to authenticated
+alter policy "sightings are visible to signed-in users" on public.sightings rename to "see own sightings and others' sightings on visible snaps";
+alter policy "see own sightings and others' sightings on visible snaps" on public.sightings
   using (
     user_id = (select auth.uid())
     or (
@@ -71,9 +70,8 @@ create policy "see own sightings and others' sightings on visible snaps" on publ
       and exists (select 1 from public.snaps s where s.id = snap_id)
     )
   );
-drop policy "users log their own sightings" on public.sightings;
-create policy "users log their own sightings on snaps they can see" on public.sightings
-  for insert to authenticated
+alter policy "users log their own sightings" on public.sightings rename to "users log their own sightings on snaps they can see";
+alter policy "users log their own sightings on snaps they can see" on public.sightings
   with check (
     (select auth.uid()) = user_id
     and exists (select 1 from public.snaps s where s.id = snap_id)
@@ -82,13 +80,11 @@ revoke insert on public.sightings from authenticated;
 grant insert (id, snap_id, lat, lng, seen_at, delayed) on public.sightings to authenticated;
 
 -- ---------- Likes ----------
-drop policy "likes are visible to signed-in users" on public.likes;
-create policy "see likes on snaps you can see" on public.likes
-  for select to authenticated
+alter policy "likes are visible to signed-in users" on public.likes rename to "see likes on snaps you can see";
+alter policy "see likes on snaps you can see" on public.likes
   using (exists (select 1 from public.snaps s where s.id = snap_id));
-drop policy "users add their own likes" on public.likes;
-create policy "users like snaps they can see" on public.likes
-  for insert to authenticated
+alter policy "users add their own likes" on public.likes rename to "users like snaps they can see";
+alter policy "users like snaps they can see" on public.likes
   with check (
     (select auth.uid()) = user_id
     and exists (select 1 from public.snaps s where s.id = snap_id)
@@ -97,13 +93,11 @@ revoke insert on public.likes from authenticated;
 grant insert (snap_id) on public.likes to authenticated;
 
 -- ---------- Comments ----------
-drop policy "comments are visible to signed-in users" on public.comments;
-create policy "see comments on snaps you can see" on public.comments
-  for select to authenticated
+alter policy "comments are visible to signed-in users" on public.comments rename to "see comments on snaps you can see";
+alter policy "see comments on snaps you can see" on public.comments
   using (exists (select 1 from public.snaps s where s.id = snap_id));
-drop policy "users add their own comments" on public.comments;
-create policy "users comment on snaps they can see" on public.comments
-  for insert to authenticated
+alter policy "users add their own comments" on public.comments rename to "users comment on snaps they can see";
+alter policy "users comment on snaps they can see" on public.comments
   with check (
     (select auth.uid()) = user_id
     and exists (select 1 from public.snaps s where s.id = snap_id)
@@ -112,9 +106,8 @@ revoke insert on public.comments from authenticated;
 grant insert (id, snap_id, body) on public.comments to authenticated;
 
 -- ---------- Photos follow their snap ----------
-drop policy "signed-in users view snap photos" on storage.objects;
-create policy "view your own photos and photos of snaps you can see" on storage.objects
-  for select to authenticated
+alter policy "signed-in users view snap photos" on storage.objects rename to "view your own photos and photos of snaps you can see";
+alter policy "view your own photos and photos of snaps you can see" on storage.objects
   using (
     bucket_id = 'snap-photos'
     and (
