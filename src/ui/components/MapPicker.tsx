@@ -52,7 +52,7 @@ export function MapPicker({ start, initial, onDone, onCancel }: { start: GeoPoin
   return (
     <div className="map-picker" role="dialog" aria-modal="true" aria-label="Choose the spot">
       <div className="map-picker-head">
-        <div><strong>Where was the cat?</strong><span className="muted small">Search, type coordinates, or tap the map. It's still blurred about 100 m when saved.</span></div>
+        <div><strong>Where was the cat?</strong><span className="muted small">Search, type coordinates, or tap the map and zoom in for a precise spot.</span></div>
         <button className="sheet-close static" aria-label="Cancel" onClick={onCancel}><Icon name="x" /></button>
       </div>
       <form className="place-search" onSubmit={search}>

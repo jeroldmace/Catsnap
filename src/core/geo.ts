@@ -46,3 +46,17 @@ export function timeAgo(ts: number, now = Date.now()): string {
   if (d < 60) return `${d} d ago`;
   return new Date(ts).toLocaleDateString();
 }
+
+export interface TimedFix extends GeoPoint { accuracy: number; at: number }
+
+/**
+ * The most accurate fix from the last `windowMs` (default 60 s), so a snap
+ * uses a sharp GPS fix rather than the first rough Wi-Fi or cached one.
+ * Falls back to the newest fix if none are recent.
+ */
+export function bestFix(fixes: TimedFix[], now = Date.now(), windowMs = 60000): TimedFix | null {
+  if (!fixes.length) return null;
+  const recent = fixes.filter((f) => now - f.at <= windowMs);
+  if (!recent.length) return fixes.reduce((a, b) => (b.at > a.at ? b : a));
+  return recent.reduce((a, b) => (b.accuracy < a.accuracy || (b.accuracy === a.accuracy && b.at > a.at) ? b : a));
+}

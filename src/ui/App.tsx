@@ -86,7 +86,7 @@ export function App() {
       </header>
 
       <main className="views">
-        {view === 'feed' && <Feed onOpen={setOpenId} onPlus={openPlus} onSnap={() => go('snap')} />}
+        {view === 'feed' && <Feed onOpen={setOpenId} onPlus={openPlus} onSnap={() => go('snap')} onEdit={(id) => { setOpenId(null); setEditId(id); if (location.hash !== '#snap') location.hash = 'snap'; else setView('snap'); }} />}
         {view === 'radar' && <Radar filters={filters} setFilters={setFilters} onOpen={setOpenId} onPlus={openPlus} />}
         {view === 'snap' && <SnapForm editId={editId} onDone={(id) => { setEditId(null); go('feed'); setTimeout(() => setOpenId(id), 50); }} onCancelEdit={() => { const id = editId; setEditId(null); go('dex'); if (id) setTimeout(() => setOpenId(id), 50); }} />}
         {view === 'dex' && <Catdex onOpen={setOpenId} onPlus={() => go('plus')} onSettings={() => go('settings')} onSnap={() => go('snap')} />}

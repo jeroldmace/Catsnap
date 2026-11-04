@@ -27,7 +27,7 @@ export interface Comment { id: string; by: string; text: string; at: number; syn
 /** Who can see a snap in the cloud. Default is shared in real time. */
 export type Visibility = 'shared' | 'delayed' | 'private';
 
-/** A cat entry. `location` is always the blurred (~100 m) point, never the exact one. */
+/** A cat entry. `location` is exact unless the poster chose to blur it (~100 m). */
 export interface Snap {
   id: string;
   /** mine = yours; community = another spotter's (from the cloud); example = the built-in starter cat. */
@@ -54,6 +54,8 @@ export interface Snap {
   crowd: { likes: number; sightings: number; comments: Comment[]; lastSighting?: Sighting | null };
   featured?: boolean;
   visibility?: Visibility;
+  /** Opt-in: location was moved randomly 30-100 m before saving. */
+  blurred?: boolean;
   /** updatedAt value that was last uploaded; differs from updatedAt when there are unsynced edits. */
   syncedAt?: number | null;
 }
@@ -76,6 +78,8 @@ export interface Settings {
   defaultVisibility: Visibility;
   /** Opt-in: delay your repeat sightings by an hour for others. */
   delaySightings: boolean;
+  /** Opt-in: blur your snap and sighting locations by about 100 m. */
+  blurLocations: boolean;
   plus: boolean; // mock subscription flag for field testing
   plan: 'year' | 'month';
   onboarded: boolean;
@@ -87,6 +91,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showExample: true,
   defaultVisibility: 'shared',
   delaySightings: false,
+  blurLocations: false,
   plus: false,
   plan: 'year',
   onboarded: false,

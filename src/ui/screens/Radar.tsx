@@ -93,6 +93,10 @@ export function Radar({ filters, setFilters, onOpen, onPlus }: Props) {
             <Recenter lat={center.lat} lng={center.lng} zoom={zoom} />
             <Circle center={[radarCenter.lat, radarCenter.lng]} radius={filters.radiusKm * 1000}
               pathOptions={{ color: '#e5862a', weight: 1.5, fillOpacity: 0.04, dashArray: '6 6' }} />
+            {geo.point && !travel && geo.accuracy != null && geo.accuracy < 2000 && (
+              <Circle center={[geo.point.lat, geo.point.lng]} radius={geo.accuracy} interactive={false}
+                pathOptions={{ color: '#2f6fd6', weight: 1, fillColor: '#2f6fd6', fillOpacity: 0.12 }} />
+            )}
             {geo.point && !travel && (
               <Marker position={[geo.point.lat, geo.point.lng]} interactive={false}
                 icon={L.divIcon({ className: '', html: '<div class="me-pin"></div>', iconSize: [18, 18] })} />
@@ -155,7 +159,7 @@ export function Radar({ filters, setFilters, onOpen, onPlus }: Props) {
         ))}
       </ul>
       {!settings.plus && <AdCard n={1} onRemoveAds={() => onPlus('Ad-free browsing')} onTap={() => toast('Mock ad. In the real app this opens the advertiser.')} />}
-      <p className="privacy-note"><Icon name="lock" /> Every pin is blurred by about 100 m, Free or Plus, and exact GPS is never saved, so no cat can be tracked to an exact spot.</p>
+      <p className="privacy-note"><Icon name="pin" /> Pins are where the cat was snapped, unless the spotter chose to blur it (about 100 m). Please don't crowd or chase cats you find here.</p>
     </section>
   );
 }

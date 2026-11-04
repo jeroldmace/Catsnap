@@ -161,7 +161,7 @@ public class CatLocationPlugin extends Plugin {
         for (String p : new String[] { LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER }) {
             try {
                 if (lm.getAllProviders().contains(p)) {
-                    lm.requestLocationUpdates(p, 2000L, 0f, listener, Looper.getMainLooper());
+                    lm.requestLocationUpdates(p, 1000L, 0f, listener, Looper.getMainLooper());
                     started++;
                 }
             } catch (SecurityException | IllegalArgumentException ignored) { }

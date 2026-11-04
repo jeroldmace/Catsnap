@@ -29,9 +29,9 @@ const sorters: Record<Sort, (a: SnapView, b: SnapView) => number> = {
 };
 const AD_EVERY = 5;
 
-interface Props { onOpen: (id: string) => void; onPlus: (feature?: string) => void; onSnap: () => void }
+interface Props { onOpen: (id: string) => void; onPlus: (feature?: string) => void; onSnap: () => void; onEdit: (id: string) => void }
 
-export function Feed({ onOpen, onPlus, onSnap }: Props) {
+export function Feed({ onOpen, onPlus, onSnap, onEdit }: Props) {
   const { snaps, toggleLike, settings, toast, account } = useStore();
   const [sort, setSort] = useState<Sort>('popular');
   const [habitat, setHabitat] = useState<HabitatKey | null>(null);
@@ -85,7 +85,7 @@ export function Feed({ onOpen, onPlus, onSnap }: Props) {
       <div className="feed">
         {list.length === 0 && <p className="empty">No cats here yet. {account ? 'Snap one, or check back as other spotters share theirs.' : 'Snap one, or sign in (Catdex → Settings) to see cats shared by other spotters.'}</p>}
         {list.flatMap((s, i) => {
-          const out = [<CatCard key={s.id} s={s} onOpen={onOpen} onLike={toggleLike} />];
+          const out = [<CatCard key={s.id} s={s} onOpen={onOpen} onLike={toggleLike} onEdit={onEdit} />];
           if (!settings.plus && (i + 1) % AD_EVERY === 0)
             out.push(<AdCard key={`ad-${i}`} n={Math.floor(i / AD_EVERY)} onRemoveAds={() => onPlus('Ad-free browsing')} onTap={() => toast('Mock ad. In the real app this opens the advertiser.')} />);
           return out;

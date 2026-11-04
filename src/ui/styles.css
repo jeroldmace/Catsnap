@@ -557,3 +557,24 @@ input, select, textarea { font: inherit; color: var(--ink); width: 100%; border:
 .diag { font-family: var(--f-mono); font-size: .7rem; color: var(--muted); background: var(--sunk); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; word-break: break-word; margin: 6px 0 0; }
 
 .sats { display: block; margin-top: 4px; font-weight: 700; color: var(--ink); }
+
+.acc.good { color: var(--good); }
+.acc.ok { color: var(--accent-deep); }
+.acc.poor { color: var(--danger); }
+
+/* Cropper */
+.cropper { position: fixed; inset: 0; z-index: 1400; background: #0d1512; color: #fff; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.cropper-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; }
+.cropper-head .pill-btn:not(.dark) { background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.2); }
+.cropper-head .pill-btn.dark { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cropper-stage { position: relative; flex: 1; min-height: 240px; }
+.cropper-tools { display: grid; gap: 10px; padding: 12px 16px 16px; }
+.cropper-zoom { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; }
+.cropper-zoom .muted { color: rgba(255,255,255,.7); }
+.cropper-zoom input { padding: 0; accent-color: var(--accent); }
+.cropper-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.cropper-row .seg { background: rgba(255,255,255,.1); }
+.cropper-row .seg button { color: rgba(255,255,255,.8); }
+.cropper-row .seg button.active { background: #fff; color: var(--ink); }
+.cropper-row .pill-btn { background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.2); }
+.edit-chip { color: var(--accent-deep); }

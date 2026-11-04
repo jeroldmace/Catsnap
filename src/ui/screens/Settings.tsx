@@ -45,7 +45,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
 
         <div className="set-group">
           <p className="set-title"><Icon name="shield" /> Privacy</p>
-          <p className="muted small">Snaps are shared in real time by default. These options are yours to switch on.</p>
+          <p className="muted small">Snaps are shared in real time with exact locations by default. These options are yours to switch on.</p>
           <div className="set-row column">
             <span><strong>Default for new snaps</strong><span className="muted small">You can change it on each snap.</span></span>
             <div className="vis-picker">
@@ -58,11 +58,15 @@ export function Settings({ onBack }: { onBack: () => void }) {
             </div>
           </div>
           <label className="set-row">
+            <span><strong>Blur my locations</strong><span className="muted small">Move new snaps and sightings to a random spot about 100 m away. Off by default for exact pins.</span></span>
+            <input type="checkbox" className="switch" checked={settings.blurLocations} onChange={(e) => updateSettings({ blurLocations: e.target.checked })} />
+          </label>
+          <label className="set-row">
             <span><strong>Delay my repeat sightings</strong><span className="muted small">Others see your "saw them again" pins an hour later.</span></span>
             <input type="checkbox" className="switch" checked={settings.delaySightings} onChange={(e) => updateSettings({ delaySightings: e.target.checked })} />
           </label>
           <div className="set-row column">
-            <span className="muted small">Always on, for everyone: your location is blurred about 100 m on the phone before anything is saved, and photos have their hidden GPS data removed.</span>
+            <span className="muted small">Always on: photos have their hidden GPS data removed, so the only location saved is the one shown on the snap.</span>
           </div>
         </div>
 

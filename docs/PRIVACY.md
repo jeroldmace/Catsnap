@@ -1,7 +1,7 @@
 # Privacy and security in Cat Snap
 
 ## Defaults
-- **Snaps are shared in real time** with other signed-in spotters. Privacy options are opt-in.
+- **Snaps are shared in real time with exact locations** with other signed-in spotters. Privacy options are opt-in.
 - **Without an account**, everything stays on the phone.
 
 ## Opt-in options
@@ -10,9 +10,10 @@
 | Shared after 1 hour | Per snap, or as your default (Settings → Privacy) | Others see the snap an hour after you share it. The time is set by the server, so the app can't bypass it. |
 | Private | Per snap, or as your default | Only you can see it. It's still backed up to your account. |
 | Delay my repeat sightings | Settings → Privacy | Others see your "saw them again" pins an hour later. |
+| Blur this location | Per snap, or Settings → Privacy → Blur my locations | Moves the saved pin to a random spot 30–100 m away. |
 
 ## Always on
-- **Location blur:** every saved location is a random point 30–100 m from where you were. The exact GPS position never leaves the phone.
+- **Accurate pins:** a snap uses the most accurate GPS fix from the last minute. Owners can move a pin when editing.
 - **Photo metadata stripped:** photos are re-encoded on the phone, which removes EXIF data, including embedded GPS.
 - **Sign-in required:** signed-out visitors can't read anything. The database refuses them.
 - **Server-enforced access rules** (row level security):

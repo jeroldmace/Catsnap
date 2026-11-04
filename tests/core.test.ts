@@ -75,3 +75,23 @@ describe('example cat', () => {
     expect(ex.crowd).toEqual({ likes: 0, sightings: 1, comments: [] });
   });
 });
+
+import { bestFix } from '../src/core/geo';
+
+describe('best fix', () => {
+  it('prefers the most accurate recent fix over the newest rough one', () => {
+    const now = 1_000_000;
+    const fixes = [
+      { lat: 1, lng: 1, accuracy: 900, at: now - 5000 },   // cached / Wi-Fi
+      { lat: 2, lng: 2, accuracy: 6, at: now - 20000 },    // sharp GPS
+      { lat: 3, lng: 3, accuracy: 40, at: now - 1000 },
+      { lat: 4, lng: 4, accuracy: 3, at: now - 120000 },   // too old
+    ];
+    expect(bestFix(fixes, now)?.lat).toBe(2);
+  });
+  it('falls back to the newest fix when none are recent, and handles none', () => {
+    const now = 1_000_000;
+    expect(bestFix([{ lat: 1, lng: 1, accuracy: 5, at: now - 300000 }, { lat: 2, lng: 2, accuracy: 50, at: now - 200000 }], now)?.lat).toBe(2);
+    expect(bestFix([], now)).toBeNull();
+  });
+});

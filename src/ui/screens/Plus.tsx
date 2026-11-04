@@ -61,7 +61,7 @@ export function Plus({ onActivated }: { onActivated: () => void }) {
         <h2>Never for sale</h2>
         <p className="muted">Some things stay the same for everyone, to keep cats safe and the game fair.</p>
         <ul>
-          <li><span><Icon name="pin" /></span><div><strong>Exact locations</strong><span>Every pin is blurred about 100 m, Free or Plus.</span></div></li>
+          <li><span><Icon name="pin" /></span><div><strong>Location privacy</strong><span>Blurring and delayed sharing are free for everyone.</span></div></li>
           <li><span><Icon name="sparkle" /></span><div><strong>Points and rarity</strong><span>You earn them by finding cats, never by paying.</span></div></li>
           <li><span><Icon name="camera" /></span><div><strong>Posting</strong><span>Unlimited snaps for every member.</span></div></li>
         </ul>

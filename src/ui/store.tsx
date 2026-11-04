@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { CITIES, FALLBACK_CENTER, exampleSnap } from '../core/example';
-import { blurPoint, distanceKm } from '../core/geo';
+import { bestFix, blurPoint, distanceKm, type TimedFix } from '../core/geo';
 import { overallScore, pointsFor, rarityOf, totalSightings, type Rarity } from '../core/rules';
 import { DEFAULT_SETTINGS, type Comment, type GeoPoint, type Interaction, type Settings, type Sighting, type Snap } from '../core/types';
 import { exportBackup, importBackup } from '../data/backup';
@@ -64,7 +64,9 @@ interface Ctx {
   updateSettings: (patch: Partial<Settings>) => Promise<void>;
   setUsername: (name: string) => Promise<void>;
   addSnap: (draft: SnapDraft, photo: Blob | null, manualPoint?: GeoPoint | null) => Promise<string>;
-  editSnap: (id: string, draft: SnapDraft, photo: Blob | null | undefined) => Promise<void>;
+  /** Most accurate fix from the last minute (what a new snap would use). */
+  getBestFix: () => TimedFix | null;
+  editSnap: (id: string, draft: SnapDraft, photo: Blob | null | undefined, moveTo?: GeoPoint | null) => Promise<void>;
   deleteSnap: (id: string) => Promise<void>;
   toggleLike: (id: string) => Promise<void>;
   addComment: (id: string, text: string) => Promise<void>;
@@ -150,6 +152,7 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
 
   // ---- Location ----
   const stopLoc = useRef<(() => void) | null>(null);
+  const recentFixes = useRef<TimedFix[]>([]);
   const geoRef = useRef(geo);
   geoRef.current = geo;
   const startWatch = useCallback(() => {
@@ -157,8 +160,12 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
     setGeo((g) => (g.status === 'live' ? g : { ...g, status: 'pending' }));
     stopLoc.current = startLocation(
       // Keep the newest fix; an older cached position never replaces a newer one.
-      (f) => setGeo((g) => (g.updatedAt && f.at < g.updatedAt && g.point ? { ...g, status: 'live' }
-        : { status: 'live', point: { lat: f.lat, lng: f.lng }, accuracy: f.accuracy, updatedAt: f.at, source: f.source })),
+      (f) => {
+        const now = Date.now();
+        recentFixes.current = [...recentFixes.current.filter((x) => now - x.at < 120000), { lat: f.lat, lng: f.lng, accuracy: f.accuracy, at: Math.min(f.at, now) }];
+        setGeo((g) => g.updatedAt && f.at < g.updatedAt && g.point ? { ...g, status: 'live' }
+        : { status: 'live', point: { lat: f.lat, lng: f.lng }, accuracy: f.accuracy, updatedAt: f.at, source: f.source });
+      },
       (status, detail) => setGeo((g) => ({ ...g, status: status === 'searching' && g.point ? 'live' : status, detail })),
     );
   }, []);
@@ -354,7 +361,9 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
   }, [repo]);
 
   const addSnap = useCallback(async (draft: SnapDraft, photo: Blob | null, manualPoint?: GeoPoint | null) => {
-    const fresh = geo.point && geo.updatedAt && Date.now() - geo.updatedAt <= POST_FRESH_MS ? geo.point : null;
+    const best = bestFix(recentFixes.current);
+    const fresh = best && Date.now() - best.at <= POST_FRESH_MS ? { lat: best.lat, lng: best.lng }
+      : geo.point && geo.updatedAt && Date.now() - geo.updatedAt <= POST_FRESH_MS ? geo.point : null;
     const where = manualPoint ?? fresh;
     if (!where) throw new Error('No recent GPS fix yet. Tap "Type the place or pick it on a map", or wait for GPS. Your entry is kept.');
     const t = Date.now();
@@ -365,7 +374,7 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
       author: live.current.settings.username,
       createdAt: t,
       updatedAt: t,
-      location: blurPoint(where), // the exact point is never stored
+      location: draft.blurred ? blurPoint(where) : where, // exact unless the poster chose to blur
       photoId: photo ? await savePhoto(photo) : null,
       photoPath: null,
       syncedAt: null,
@@ -382,7 +391,7 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
     await repo.putMeta(TOMBSTONES_KEY, [...list, t]);
   }, [repo]);
 
-  const editSnap = useCallback(async (id: string, draft: SnapDraft, photo: Blob | null | undefined) => {
+  const editSnap = useCallback(async (id: string, draft: SnapDraft, photo: Blob | null | undefined, moveTo?: GeoPoint | null) => {
     const old = live.current.mine.find((s) => s.id === id);
     if (!old) return;
     let photoId = old.photoId ?? null;
@@ -393,7 +402,8 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
       photoId = photo ? await savePhoto(photo) : null;
       photoPath = null;
     }
-    const next: Snap = { ...old, ...draft, photoId, photoPath, updatedAt: Date.now() };
+    const location = moveTo ? (old.blurred ? blurPoint(moveTo) : moveTo) : old.location;
+    const next: Snap = { ...old, ...draft, blurred: old.blurred, location, photoId, photoPath, updatedAt: Date.now() };
     await repo.putSnap(next);
     setMine((m) => m.map((s) => (s.id === id ? next : s)));
     queueSync();
@@ -422,7 +432,9 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
 
   const logSighting = useCallback(async (id: string) => {
     if (!geo.point) { toast('Turn on location to log a sighting.'); return false; }
-    const p = blurPoint(geo.point);
+    const best = bestFix(recentFixes.current);
+    const exact = best ? { lat: best.lat, lng: best.lng } : geo.point;
+    const p = live.current.settings.blurLocations ? blurPoint(exact) : exact;
     await updateIx(id, (ix) => ({
       ...ix,
       sightings: [...ix.sightings, { ...p, id: uid(), at: Date.now(), by: live.current.settings.username, delayed: live.current.settings.delaySightings, synced: false }],
@@ -451,7 +463,7 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
 
   const value: Ctx = {
     ready, settings, geo, here, radarCenter, travel, setTravel, snaps, points, persisted, toast, toastMsg,
-    account, sync, syncNow, signUp, signIn, signOut, deleteAccount,
+    account, sync, syncNow, getBestFix: () => bestFix(recentFixes.current), signUp, signIn, signOut, deleteAccount,
     updateSettings, setUsername, addSnap, editSnap, deleteSnap, toggleLike, addComment, logSighting, exportData, importData, resetAll,
     requestLocation: startWatch,
   };

@@ -4,9 +4,9 @@ import { CatArt } from './CatArt';
 import { HabitatTag, RarityBadge, ScoreChip } from './bits';
 import { Icon } from './Icon';
 
-interface Props { s: SnapView; onOpen: (id: string) => void; onLike: (id: string) => void }
+interface Props { s: SnapView; onOpen: (id: string) => void; onLike: (id: string) => void; onEdit?: (id: string) => void }
 
-export function CatCard({ s, onOpen, onLike }: Props) {
+export function CatCard({ s, onOpen, onLike, onEdit }: Props) {
   const fresh = Date.now() - s.lastSeen < 3600000;
   return (
     <article className={`card r${s.rarity.tier}`} onClick={() => onOpen(s.id)}>
@@ -28,7 +28,9 @@ export function CatCard({ s, onOpen, onLike }: Props) {
             <span className="act" aria-label="Comments"><Icon name="comment" />{s.comments.length}</span>
             <span className="act" aria-label="Sightings"><Icon name="eye" />{s.sightingCount}</span>
           </div>
-          <span className="byline">{s.source === 'mine' ? 'Your snap' : `@${s.author}`}</span>
+          {s.source === 'mine' && onEdit
+            ? <button className="act edit-chip" onClick={(e) => { e.stopPropagation(); onEdit(s.id); }}><Icon name="edit" />Edit</button>
+            : <span className="byline">{s.source === 'example' ? 'Example' : `@${s.author}`}</span>}
         </div>
       </div>
     </article>

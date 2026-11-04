@@ -9,25 +9,27 @@ import { POST_FRESH_MS, useStore, type SnapDraft } from '../store';
 import { Icon, Paw } from '../components/Icon';
 import { LocationHelp } from '../components/LocationHelp';
 import { MapPicker } from '../components/MapPicker';
+import { PhotoCropper } from '../components/PhotoCropper';
 import { isNative } from '../../data/platform';
 
 interface Props { editId: string | null; onDone: (id: string) => void; onCancelEdit: () => void }
 
-const blank = (visibility: Visibility = 'shared'): SnapDraft => ({
+const blank = (visibility: Visibility = 'shared', blurred = false): SnapDraft => ({
   name: '', coat: 'orange', eyes: 'amber', habitat: 'street', spot: '', notes: '', tags: [],
-  ratings: { charm: 3, fluff: 3, pose: 3, friendly: 3 }, visibility,
+  ratings: { charm: 3, fluff: 3, pose: 3, friendly: 3 }, visibility, blurred,
 });
 
 export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
-  const { snaps, addSnap, editSnap, geo, toast, settings, account, here } = useStore();
+  const { snaps, addSnap, editSnap, geo, toast, settings, account, here, getBestFix } = useStore();
   const editing = editId ? snaps.find((s) => s.id === editId && s.source === 'mine') ?? null : null;
-  const [d, setD] = useState<SnapDraft>(() => blank(settings.defaultVisibility));
+  const [d, setD] = useState<SnapDraft>(() => blank(settings.defaultVisibility, settings.blurLocations));
   const [photo, setPhoto] = useState<Blob | null | undefined>(undefined); // undefined = unchanged (edit)
   const [preview, setPreview] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [manual, setManual] = useState<GeoPoint | null>(null);
   const [picking, setPicking] = useState(false);
+  const [cropping, setCropping] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const [showAllTags, setShowAllTags] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -36,14 +38,15 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
   // Load the snap being edited, or reset for a new one.
   useEffect(() => {
     if (editing) {
-      const { name, coat, eyes, habitat, spot, notes, tags, ratings, visibility } = editing;
-      setD({ name, coat, eyes, habitat, spot, notes, tags: [...tags], ratings: { ...ratings }, visibility: visibility ?? 'shared' });
+      const { name, coat, eyes, habitat, spot, notes, tags, ratings, visibility, blurred } = editing;
+      setD({ name, coat, eyes, habitat, spot, notes, tags: [...tags], ratings: { ...ratings }, visibility: visibility ?? 'shared', blurred });
       setPreview(editing.photoSrc);
       setConfirmed(true);
     } else {
-      setD(blank(settings.defaultVisibility)); setPreview(null); setConfirmed(false);
+      setD(blank(settings.defaultVisibility, settings.blurLocations)); setPreview(null); setConfirmed(false);
     }
     setPhoto(undefined);
+    setManual(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId]);
 
@@ -96,13 +99,14 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
     try {
       const draft = { ...d, name: d.name.trim(), spot: d.spot.trim(), notes: d.notes.trim() };
       if (editing) {
-        await editSnap(editing.id, draft, photo);
+        await editSnap(editing.id, draft, photo, manual);
+        setManual(null);
         toast('Snap updated');
         onDone(editing.id);
       } else {
         const id = await addSnap(draft, photo ?? null, manual);
         toast(`Posted. ${forecast.name} find, +${forecast.points} pts`);
-        setD(blank(settings.defaultVisibility)); setPhoto(undefined); setPreview(null); setConfirmed(false); setManual(null);
+        setD(blank(settings.defaultVisibility, settings.blurLocations)); setPhoto(undefined); setPreview(null); setConfirmed(false); setManual(null);
         onDone(id);
       }
     } catch (err) {
@@ -112,7 +116,18 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
     }
   };
 
-  const freshFix = !!geo.point && !!geo.updatedAt && Date.now() - geo.updatedAt <= POST_FRESH_MS;
+  // The fix a new snap would use: the sharpest one from the last minute.
+  const [best, setBest] = useState(() => getBestFix());
+  useEffect(() => {
+    if (editing) return;
+    const t = window.setInterval(() => setBest(getBestFix()), 1500);
+    setBest(getBestFix());
+    return () => window.clearInterval(t);
+  }, [editing, getBestFix, geo.updatedAt]);
+  const freshFix = !!best && Date.now() - best.at <= POST_FRESH_MS;
+  const acc = best ? Math.round(best.accuracy) : null;
+  const accClass = acc == null ? '' : acc <= 15 ? 'good' : acc <= 50 ? 'ok' : 'poor';
+  const blurNote = d.blurred ? ', blurred about 100 m before saving' : ', saved exactly';
 
   return (
     <section className="view" aria-label={editing ? 'Edit snap' : 'Snap a cat'}>
@@ -145,6 +160,7 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
           <div className="photo-actions">
             <button type="button" className="pill-btn dark" onClick={takePhoto}><Icon name="camera" />{preview ? 'Retake' : 'Take photo'}</button>
             <button type="button" className="pill-btn" onClick={() => document.getElementById('libraryInput')?.click()}><Icon name="image" />From library</button>
+            {preview && <button type="button" className="pill-btn" onClick={() => setCropping(true)}><Icon name="image" />Crop</button>}
             {preview && <button type="button" className="pill-btn" onClick={() => { setPhoto(null); setPreview(null); }}><Icon name="trash" />Remove</button>}
           </div>
         </div>
@@ -242,6 +258,11 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
           {!account && <span className="muted small">You're not signed in, so this snap stays on your phone for now. It's shared this way once you sign in.</span>}
         </div>
 
+        <label className="confirm">
+          <input type="checkbox" id="blurLocation" checked={!!d.blurred} disabled={!!editing} onChange={(e) => set('blurred', e.target.checked)} />
+          <span><strong>Blur this location</strong> by about 100 m{editing ? ' (fixed when the snap was posted)' : '. Off: the exact spot is saved.'}</span>
+        </label>
+
         {!editing && (
           <label className="confirm">
             <input type="checkbox" id="wildConfirm" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />
@@ -250,14 +271,19 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
         )}
 
         {editing ? (
-          <div className="loc-line"><Icon name="pin" /><span>Location stays where you first snapped this cat.</span></div>
+          <div className="loc-line"><Icon name="pin" /><span>{manual ? 'Pin moved to the spot you chose. Saved when you tap Save changes.' : 'Pinned where you first snapped this cat.'}</span>
+            <button type="button" className="pill-btn" onClick={() => setPicking(true)}>Move pin</button>
+            {manual && <button type="button" className="pill-btn" onClick={() => setManual(null)}>Undo</button>}
+          </div>
         ) : manual ? (
-          <div className="loc-line"><Icon name="pin" /><span>Pinned at the spot you chose on the map, blurred about 100 m before saving.</span>
+          <div className="loc-line"><Icon name="pin" /><span>Pinned at the spot you chose on the map{blurNote}.</span>
             <button type="button" className="pill-btn" onClick={() => setPicking(true)}>Change</button>
             <button type="button" className="pill-btn" onClick={() => setManual(null)}>Use GPS</button>
           </div>
         ) : freshFix ? (
-          <div className="loc-line"><Icon name="pin" /><span>Pinned at your GPS position (±{Math.round(geo.accuracy ?? 0)} m), blurred about 100 m before saving.</span>
+          <div className="loc-line"><Icon name="pin" /><span>Pinned at your GPS position{blurNote}. Accuracy <strong className={`acc ${accClass}`}>±{acc} m</strong>
+            {acc != null && acc > 50 && <> · Hold still under open sky for a few seconds for a sharper fix.</>}
+            {acc != null && acc > 15 && acc <= 50 && <> · Improving…</>}</span>
             <button type="button" className="pill-btn" onClick={() => setPicking(true)}>Type or pick instead</button>
           </div>
         ) : (
@@ -270,7 +296,11 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
 
         <button type="submit" className="primary-btn" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Post snap'}</button>
       </form>
-      {picking && <MapPicker start={geo.point ?? here} initial={manual} onCancel={() => setPicking(false)} onDone={(p) => { setManual(p); setPicking(false); }} />}
+      {picking && <MapPicker start={editing ? editing.location : geo.point ?? here} initial={manual ?? (editing ? editing.location : null)} onCancel={() => setPicking(false)} onDone={(p) => { setManual(p); setPicking(false); }} />}
+      {cropping && preview && (
+        <PhotoCropper src={preview} onCancel={() => setCropping(false)}
+          onDone={(blob) => { setPhoto(blob); setPreview(URL.createObjectURL(blob)); setCropping(false); }} />
+      )}
     </section>
   );
 }

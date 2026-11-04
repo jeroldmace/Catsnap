@@ -12,7 +12,7 @@ export function Welcome() {
         <ul>
           <li><Icon name="camera" /><span><strong>Snap and rate</strong> cats outdoors. No pets at home.</span></li>
           <li><Icon name="radar" /><span><strong>Cat Radar</strong> shows recent sightings near you.</span></li>
-          <li><Icon name="lock" /><span><strong>Cat-safe:</strong> every location is blurred about 100 m and photo GPS data is stripped.</span></li>
+          <li><Icon name="lock" /><span><strong>Your choice:</strong> pins are exact by default; you can blur locations or delay and hide snaps in Settings. Hidden photo GPS data is always stripped.</span></li>
           <li><Icon name="shield" /><span><strong>Private:</strong> this field-test build keeps everything on your phone.</span></li>
         </ul>
         <button className="primary-btn" onClick={() => { requestLocation(); updateSettings({ onboarded: true }); }}>

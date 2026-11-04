@@ -71,9 +71,9 @@ export function snapInsertRow(s: Snap) {
   };
 }
 
-/** Columns a client may change later. Location and creation time are fixed. */
+/** Columns a client may change later (owners can correct the pin). Id and creation time are fixed. */
 export function snapUpdateRow(s: Snap) {
-  const { id: _id, lat: _lat, lng: _lng, created_at: _c, ...rest } = snapInsertRow(s);
+  const { id: _id, created_at: _c, ...rest } = snapInsertRow(s);
   return rest;
 }
 

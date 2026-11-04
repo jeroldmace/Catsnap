@@ -48,15 +48,14 @@ describe('cloud mapping', () => {
     expect(mineRemote[0].syncedAt).toBe(mineRemote[0].updatedAt);
   });
 
-  it('never sends owner or server-controlled columns, and keeps location fixed on update', () => {
+  it('never sends owner or server-controlled columns; updates may move the pin', () => {
     const s = { ...exampleSnap({ lat: 1, lng: 2 }, '/', 0), id: SNAP, source: 'mine' as const, visibility: 'delayed' as const };
     const ins = snapInsertRow(s);
     expect(ins).not.toHaveProperty('owner_id');
     expect(ins).not.toHaveProperty('shared_at');
     expect(ins).toMatchObject({ lat: 1, lng: 2, visibility: 'delayed' });
     const upd = snapUpdateRow(s);
-    expect(upd).not.toHaveProperty('lat');
-    expect(upd).not.toHaveProperty('lng');
+    expect(upd).toMatchObject({ lat: 1, lng: 2 });
     expect(upd).not.toHaveProperty('id');
     expect(upd).not.toHaveProperty('created_at');
   });
