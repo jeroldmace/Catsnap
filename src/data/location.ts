@@ -32,12 +32,21 @@ export const openAppSettings = () => (isNative() ? CatLocation.openAppSettings()
  * fused location; whichever answers first wins. Web: the Geolocation API.
  * Never gives up: keeps listening until a fix arrives.
  */
+// Counters for the diagnostics readout in Settings.
+const diag = { started: 0, fixes: {} as Record<string, number>, lastError: '', lastErrorAt: 0, lastStatus: '' };
+
 export function startLocation(onFix: OnFix, onStatus: OnStatus): () => void {
+  diag.started = Date.now();
   let stopped = false;
   const stops: (() => void)[] = [];
   let lastFixAt = 0;
-  const fix: OnFix = (f) => { if (stopped) return; lastFixAt = Date.now(); onFix(f); };
-  const status: OnStatus = (s, d) => { if (!stopped) onStatus(s, d); };
+  const fix: OnFix = (f) => { if (stopped) return; lastFixAt = Date.now(); diag.fixes[f.source] = (diag.fixes[f.source] ?? 0) + 1; onFix(f); };
+  const status: OnStatus = (s, d) => {
+    if (stopped) return;
+    diag.lastStatus = s;
+    if (d) { diag.lastError = d.slice(0, 200); diag.lastErrorAt = Date.now(); }
+    onStatus(s, d);
+  };
 
   // If nothing arrives for a while, say we're still searching (never "unavailable").
   const searchTimer = window.setInterval(() => { if (!lastFixAt) status('searching'); }, 15000);
@@ -75,7 +84,7 @@ async function startNative(onFix: OnFix, onStatus: OnStatus): Promise<() => void
       onFix({ lat: data.lat, lng: data.lng, accuracy: data.accuracy ?? 9999, at: data.time ?? Date.now(), source: data.provider ?? 'gps' });
     }
   });
-  const stopFused = await startFused(onFix).catch(() => () => {});
+  const stopFused = await startFused(onFix).catch((e) => { diag.lastError = `fused: ${String((e as Error)?.message ?? e).slice(0, 160)}`; diag.lastErrorAt = Date.now(); return () => {}; });
   return () => { CatLocation.clearWatch({ id }).catch(() => {}); stopFused(); };
 }
 
@@ -112,4 +121,21 @@ export function locationMessage(status: LocStatus, accuracy: number | null, hasP
       : "Location is blocked for this site. Allow it in your browser's site settings, then tap Retry.";
     case 'unsupported': return "This device can't share its location. You can set the spot on a map when you post.";
   }
+}
+
+/** A short technical summary to screenshot when location misbehaves. */
+export async function locationDiagnostics(): Promise<string> {
+  const lines: string[] = [];
+  lines.push(`platform: ${isNative() ? 'android app' : 'web'}; online: ${navigator.onLine}`);
+  if (isNative()) {
+    try {
+      const st = await CatLocation.status();
+      lines.push(`permission: ${st.permission}; location on: ${st.enabled}; gps provider: ${st.gps}; network provider: ${st.network}`);
+    } catch (e) { lines.push(`status error: ${String((e as Error)?.message ?? e).slice(0, 120)}`); }
+  }
+  const secs = diag.started ? Math.round((Date.now() - diag.started) / 1000) : 0;
+  const fixes = Object.entries(diag.fixes).map(([k, v]) => `${k} ${v}`).join(', ') || 'none';
+  lines.push(`listening for ${secs}s; fixes: ${fixes}; last status: ${diag.lastStatus || '-'}`);
+  if (diag.lastError) lines.push(`last error (${Math.round((Date.now() - diag.lastErrorAt) / 1000)}s ago): ${diag.lastError}`);
+  return lines.join('\n');
 }

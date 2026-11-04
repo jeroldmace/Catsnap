@@ -356,7 +356,7 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
   const addSnap = useCallback(async (draft: SnapDraft, photo: Blob | null, manualPoint?: GeoPoint | null) => {
     const fresh = geo.point && geo.updatedAt && Date.now() - geo.updatedAt <= POST_FRESH_MS ? geo.point : null;
     const where = manualPoint ?? fresh;
-    if (!where) throw new Error('No recent GPS fix yet. Tap "Set on map" to pick the spot, or wait for GPS. Your entry is kept.');
+    if (!where) throw new Error('No recent GPS fix yet. Tap "Type the place or pick it on a map", or wait for GPS. Your entry is kept.');
     const t = Date.now();
     const snap: Snap = {
       ...draft,

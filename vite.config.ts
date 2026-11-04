@@ -6,7 +6,7 @@ import pkg from './package.json';
 import { SUPABASE_URL } from './src/config';
 
 // Content Security Policy for the web build: the app may only talk to itself,
-// the Cat Snap Supabase project and OpenStreetMap tiles. (The Android build
+// the Cat Snap Supabase project, OpenStreetMap tiles and OpenStreetMap place search. (The Android build
 // uses --mode native and skips this, because Capacitor injects its own script.)
 const csp = [
   "default-src 'self'",
@@ -14,7 +14,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   `img-src 'self' data: blob: https://tile.openstreetmap.org ${SUPABASE_URL}`,
-  `connect-src 'self' ${SUPABASE_URL} ${SUPABASE_URL.replace('https://', 'wss://')}`,
+  `connect-src 'self' ${SUPABASE_URL} ${SUPABASE_URL.replace('https://', 'wss://')} https://nominatim.openstreetmap.org`,
   "worker-src 'self'",
   "manifest-src 'self'",
   "object-src 'none'",

@@ -5,6 +5,7 @@ import { useStore } from '../store';
 import { Icon } from '../components/Icon';
 import { isNative } from '../../data/platform';
 import { LocationHelp } from '../components/LocationHelp';
+import { locationDiagnostics } from '../../data/location';
 
 export const VISIBILITY_LABEL: Record<Visibility, { title: string; detail: string }> = {
   shared: { title: 'Shared', detail: 'Other spotters see it right away.' },
@@ -17,6 +18,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
   const [name, setName] = useState(settings.username);
   const [armed, setArmed] = useState(false);
   const [usage, setUsage] = useState<string | null>(null);
+  const [diagText, setDiagText] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const mine = snaps.filter((s) => s.source === 'mine').length;
 
@@ -83,6 +85,8 @@ export function Settings({ onBack }: { onBack: () => void }) {
           <div className="set-row column">
             <span><strong>Location</strong>{geo.source && <span className="muted small">Last fix from {geo.source === 'fused' ? 'Google location' : geo.source === 'gps' ? 'satellite GPS' : geo.source === 'network' ? 'Wi-Fi / mobile network' : geo.source}{geo.updatedAt ? `, ${timeAgo(geo.updatedAt)}` : ''}</span>}</span>
             <LocationHelp compact />
+            <button className="pill-btn" style={{ justifySelf: 'start', marginTop: 6 }} onClick={() => locationDiagnostics().then(setDiagText)}>Show location diagnostics</button>
+            {diagText && <pre className="diag">{diagText}</pre>}
           </div>
           <div className="set-row">
             <span><strong>On this phone</strong><span className="muted small">

@@ -8,7 +8,7 @@ Earlier field-test builds were offline-only. It's an installable web app (PWA) t
 
 ## Get it on your phone
 
-**Android:** install the APK from [`releases/`](releases/). See [docs/ANDROID.md](docs/ANDROID.md).
+**Android:** install the APK from [`releases/`](releases/). See [docs/ANDROID.md](docs/ANDROID.md). To share with friends, use personal invite links ([docs/SHARING.md](docs/SHARING.md)).
 
 **Any phone (web app):**
 

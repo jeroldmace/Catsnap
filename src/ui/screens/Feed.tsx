@@ -10,11 +10,21 @@ import { CatCard } from '../components/CatCard';
 import { RarityBadge, ScoreChip } from '../components/bits';
 import { Icon } from '../components/Icon';
 
-type Sort = 'recent' | 'nearby' | 'top' | 'rare';
+type Sort = 'popular' | 'recent' | 'nearby' | 'top' | 'rare';
 const SORTS: { key: Sort; label: string }[] = [
-  { key: 'recent', label: 'Recent' }, { key: 'nearby', label: 'Nearby' }, { key: 'top', label: 'Top rated' }, { key: 'rare', label: 'Rare finds' },
+  { key: 'popular', label: 'Popular' }, { key: 'recent', label: 'Recent' }, { key: 'nearby', label: 'Nearby' }, { key: 'top', label: 'Top rated' }, { key: 'rare', label: 'Rare finds' },
 ];
+/**
+ * Popularity: likes, comments and extra sightings, cooled by age so new finds
+ * can rise (a "hot" ranking). Ties fall back to the newest.
+ */
+export function popularity(s: SnapView, now = Date.now()): number {
+  const engagement = s.likes + 2 * s.comments.length + 2 * Math.max(0, s.sightingCount - 1) + 1;
+  const hours = Math.max(0, (now - s.lastSeen) / 3600000);
+  return engagement / Math.pow(hours + 2, 1.2);
+}
 const sorters: Record<Sort, (a: SnapView, b: SnapView) => number> = {
+  popular: (a, b) => popularity(b) - popularity(a) || b.lastSeen - a.lastSeen,
   recent: (a, b) => b.lastSeen - a.lastSeen,
   nearby: (a, b) => a.distanceKm - b.distanceKm,
   top: (a, b) => b.score - a.score || b.likes - a.likes,
@@ -26,7 +36,7 @@ interface Props { onOpen: (id: string) => void; onPlus: (feature?: string) => vo
 
 export function Feed({ onOpen, onPlus, onSnap }: Props) {
   const { snaps, toggleLike, settings, toast, account } = useStore();
-  const [sort, setSort] = useState<Sort>('recent');
+  const [sort, setSort] = useState<Sort>('popular');
   const [habitat, setHabitat] = useState<HabitatKey | null>(null);
   const [tag, setTag] = useState<string | null>(null);
   const popularTags = useMemo(() => tagPopularity(snaps.filter((s) => s.source !== 'example'), []).filter((t) => t.count > 0).slice(0, 15), [snaps]);

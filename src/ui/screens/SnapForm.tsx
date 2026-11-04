@@ -241,12 +241,12 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
           </div>
         ) : freshFix ? (
           <div className="loc-line"><Icon name="pin" /><span>Pinned at your GPS position (±{Math.round(geo.accuracy ?? 0)} m), blurred about 100 m before saving.</span>
-            <button type="button" className="pill-btn" onClick={() => setPicking(true)}>Set on map</button>
+            <button type="button" className="pill-btn" onClick={() => setPicking(true)}>Type or pick instead</button>
           </div>
         ) : (
           <div className="field">
             <LocationHelp suffix="You can keep filling in the entry." />
-            <button type="button" className="pill-btn dark" onClick={() => setPicking(true)}><Icon name="map" />Set the spot on a map instead</button>
+            <button type="button" className="pill-btn dark" onClick={() => setPicking(true)}><Icon name="map" />Type the place or pick it on a map</button>
           </div>
         )}
         {!editing && <p className="forecast">This looks like a <strong>{forecast.name}</strong> find: +{forecast.points} pts.</p>}

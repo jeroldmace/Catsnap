@@ -27,6 +27,7 @@
   - no analytics
   - the web build's Content Security Policy only allows connections to the Cat Snap Supabase project and OpenStreetMap tiles
   - the map tiles do reveal the map area you're viewing to OpenStreetMap; the Radar view avoids that
+  - typing a place name to find a spot sends that text to OpenStreetMap's Nominatim search, only when you tap Search; typed coordinates never leave the phone
 
 ## Recommended Supabase dashboard settings
 These can't be set from code. In your project's **Authentication** settings:
