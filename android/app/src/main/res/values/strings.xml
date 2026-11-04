@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cat Snap</string>
+    <string name="title_activity_main">Cat Snap</string>
+    <string name="package_name">app.catsnap.fieldtest</string>
+    <string name="custom_url_scheme">app.catsnap.fieldtest</string>
+</resources>

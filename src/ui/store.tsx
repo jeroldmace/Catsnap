@@ -3,7 +3,8 @@ import { CITIES, DEMO_CENTER, demoSnaps } from '../core/demo';
 import { blurPoint, distanceKm } from '../core/geo';
 import { overallScore, pointsFor, rarityOf, totalSightings, type Rarity } from '../core/rules';
 import { DEFAULT_SETTINGS, type Comment, type GeoPoint, type Interaction, type Settings, type Sighting, type Snap } from '../core/types';
-import { exportBackup, importBackup, downloadBlob } from '../data/backup';
+import { exportBackup, importBackup } from '../data/backup';
+import { saveFile } from '../data/platform';
 import { createIdbRepository, requestPersistentStorage } from '../data/idbRepository';
 import type { Repository } from '../data/repository';
 import { processPhoto } from '../data/photos';
@@ -48,7 +49,7 @@ interface Ctx {
   toggleLike: (id: string) => Promise<void>;
   addComment: (id: string, text: string) => Promise<void>;
   logSighting: (id: string) => Promise<boolean>;
-  exportData: () => Promise<void>;
+  exportData: () => Promise<'downloaded' | 'shared'>;
   importData: (file: File) => Promise<void>;
   resetAll: () => Promise<void>;
   requestLocation: () => void;
@@ -239,7 +240,7 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
 
   const exportData = useCallback(async () => {
     const blob = await exportBackup(repo);
-    downloadBlob(blob, `catsnap-backup-${new Date().toISOString().slice(0, 10)}.json`);
+    return saveFile(blob, `catsnap-backup-${new Date().toISOString().slice(0, 10)}.json`);
   }, [repo]);
 
   const importData = useCallback(async (file: File) => {

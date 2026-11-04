@@ -6,6 +6,10 @@ This is the **field-test build (v0.5)**. It's an installable web app (PWA) that 
 
 ## Get it on your phone
 
+**Android:** install the APK from [`releases/`](releases/). See [docs/ANDROID.md](docs/ANDROID.md).
+
+**Any phone (web app):**
+
 The app needs HTTPS for GPS and the camera, so it has to be hosted. Pick one option:
 
 | Option | Steps | Works for private repos |
@@ -51,5 +55,7 @@ src/data/   Repository interface + IndexedDB implementation, photo processing, b
             Swap in a Supabase repository later without touching the UI.
 src/ui/     React screens and components, app state (store.tsx), styles.
 tests/      Vitest unit tests.
+android/    Capacitor Android project (wraps the web app into an APK).
+releases/   Built APKs for sideloading.
 prototype/  The original single-file clickable prototype, kept for reference.
 ```

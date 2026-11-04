@@ -9,9 +9,15 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host",
     "typecheck": "tsc -b",
-    "test": "vitest run"
+    "test": "vitest run",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../releases/catsnap-$npm_package_version.apk"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/core": "^7.4.4",
+    "@capacitor/filesystem": "^7.1.4",
+    "@capacitor/share": "^7.0.2",
     "idb": "8.0.0",
     "leaflet": "1.9.4",
     "react": "18.3.1",
@@ -19,6 +25,7 @@
     "react-leaflet": "4.2.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.4.4",
     "@types/leaflet": "1.9.12",
     "@types/node": "^22.10.2",
     "@types/react": "18.3.12",

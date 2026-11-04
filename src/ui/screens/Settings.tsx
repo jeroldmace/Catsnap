@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { Icon } from '../components/Icon';
+import { isNative } from '../../data/platform';
 
 export function Settings({ onBack }: { onBack: () => void }) {
   const { settings, updateSettings, snaps, persisted, exportData, importData, resetAll, toast, geo, requestLocation } = useStore();
@@ -65,7 +66,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
           <p className="set-title"><Icon name="shield" /> Backup</p>
           <p className="muted small">Your snaps live only on this phone. Save a backup file now and then, especially before clearing browser data or switching phones.</p>
           <div className="set-actions">
-            <button className="pill-btn dark" onClick={() => exportData().then(() => toast('Backup saved to your downloads')).catch(() => toast('Backup failed. Try again.'))}><Icon name="download" />Save backup</button>
+            <button className="pill-btn dark" onClick={() => exportData().then((how) => toast(how === 'shared' ? 'Backup ready. Pick where to save it.' : 'Backup saved to your downloads')).catch(() => toast('Backup failed. Try again.'))}><Icon name="download" />Save backup</button>
             <button className="pill-btn" onClick={() => fileRef.current?.click()}><Icon name="upload" />Restore backup</button>
             <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => {
               const f = e.target.files?.[0];
@@ -78,7 +79,7 @@ export function Settings({ onBack }: { onBack: () => void }) {
         <div className="set-group">
           <p className="set-title">Field-testing tips</p>
           <ul className="tips">
-            <li>Add Cat Snap to your home screen so it opens full screen and works offline.</li>
+            {!isNative() && <li>Add Cat Snap to your home screen so it opens full screen and works offline.</li>}
             <li>Open the Radar once on Wi-Fi in a new area. Map tiles you've viewed are kept for offline use.</li>
             <li>Use "Saw them again" on a cat you've already snapped instead of making a duplicate.</li>
           </ul>
