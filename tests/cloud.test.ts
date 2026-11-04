@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isCloudId, mapPulled, mergeInteraction, snapInsertRow, snapUpdateRow, type PulledSnapRow } from '../src/data/cloud';
+import { SNAP_SELECT, isCloudId, mapPulled, mergeInteraction, snapInsertRow, snapUpdateRow, type PulledSnapRow } from '../src/data/cloud';
 import { exampleSnap, EXAMPLE_ID } from '../src/core/example';
 
 const ME = '11111111-1111-4111-8111-111111111111';
@@ -75,5 +75,13 @@ describe('merging interactions', () => {
     expect(m.liked).toBe(true);           // pending local like wins
     expect(m.comments.map((c) => c.id)).toEqual(['local', 'c2']);
     expect(m.comments[0].synced).toBe(false);
+  });
+});
+
+describe('pull query', () => {
+  it('names the foreign key for every profiles embed (avoids PGRST201)', () => {
+    expect(SNAP_SELECT).toContain('profiles!snaps_owner_id_fkey(username)');
+    expect(SNAP_SELECT).toContain('profiles!comments_user_id_fkey(username)');
+    expect(SNAP_SELECT).not.toMatch(/[\s,(]profiles\(/);
   });
 });

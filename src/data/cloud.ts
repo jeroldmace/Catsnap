@@ -48,9 +48,14 @@ export interface PulledSnapRow extends SnapRow {
   sightings: { id: string; user_id: string; lat: number; lng: number; seen_at: string; delayed: boolean }[];
 }
 
+// Embeds name their foreign key explicitly: snaps and profiles are also linked
+// indirectly through likes/comments/sightings, which PostgREST would otherwise
+// reject as ambiguous (PGRST201).
 export const SNAP_SELECT =
   'id, owner_id, name, coat, eyes, habitat, spot, notes, tags, charm, fluff, pose, friendly, lat, lng, photo_path, visibility, created_at, updated_at,' +
-  ' profiles(username), likes(user_id), comments(id, user_id, body, created_at, profiles(username)), sightings(id, user_id, lat, lng, seen_at, delayed)';
+  ' profiles!snaps_owner_id_fkey(username), likes(user_id),' +
+  ' comments(id, user_id, body, created_at, profiles!comments_user_id_fkey(username)),' +
+  ' sightings(id, user_id, lat, lng, seen_at, delayed)';
 
 /** Columns a client may write on insert (owner_id and shared_at are set by the server). */
 export function snapInsertRow(s: Snap) {
@@ -251,7 +256,7 @@ export async function pushChanges(repo: Repository, userId: string, mine: Snap[]
 
 export async function pull(userId: string): Promise<PullResult> {
   const { data, error } = await cloud().from('snaps').select(SNAP_SELECT).order('created_at', { ascending: false }).limit(500);
-  if (error) throw error;
+  if (error) throw new Error(`Couldn't download snaps (${error.code ?? 'network'}). Your snaps are safe on this phone; sync will retry.`);
   return mapPulled((data ?? []) as unknown as PulledSnapRow[], userId);
 }
 
