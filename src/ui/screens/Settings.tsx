@@ -43,6 +43,8 @@ export function Settings({ onBack }: { onBack: () => void }) {
       <div className="settings">
         <div id="account"><AccountPanel /></div>
 
+        {account && <NotificationsPanel />}
+
         <div className="set-group">
           <p className="set-title"><Icon name="shield" /> Privacy</p>
           <p className="muted small">Snaps are shared in real time with exact locations by default. These options are yours to switch on.</p>
@@ -231,6 +233,36 @@ function AccountPanel() {
         <button type="submit" className="primary-btn" disabled={busy}>{busy ? 'Please wait…' : mode === 'up' ? 'Create account' : 'Sign in'}</button>
       </form>
       <p className="muted small">Your email is only used to sign in and is never shown to other spotters. You'll get a random username, which you can change after signing in.</p>
+    </div>
+  );
+}
+
+function NotificationsPanel() {
+  const { settings, setNotifications, toast } = useStore();
+  const n = settings.notify;
+  const set = (patch: Partial<typeof n>) => setNotifications(patch).then((on) => {
+    if (patch.enabled && !on) toast(isNative() ? 'Allow notifications for Cat Snap in your phone settings to turn them on.' : 'Phone notifications work in the Android app.');
+  });
+  const kinds: [keyof typeof n, string][] = [['like', 'Likes on your cats'], ['comment', 'Comments on your cats'], ['sighting', 'Someone spots your cat again'], ['nearby', 'New cats near you']];
+  return (
+    <div className="set-group">
+      <p className="set-title"><Icon name="bell" /> Notifications</p>
+      <label className="set-row">
+        <span><strong>Phone notifications</strong><span className="muted small">{isNative() ? 'Checks about every 15 minutes, even when the app is closed. Works without Google services.' : 'Available in the Android app. Activity still shows under the bell.'}</span></span>
+        <input type="checkbox" className="switch" checked={n.enabled} disabled={!isNative()} onChange={(e) => set({ enabled: e.target.checked })} />
+      </label>
+      {kinds.map(([k, label]) => (
+        <label className="set-row" key={k}>
+          <span><strong>{label}</strong></span>
+          <input type="checkbox" className="switch" checked={!!n[k]} onChange={(e) => set({ [k]: e.target.checked })} />
+        </label>
+      ))}
+      <div className="set-row">
+        <span><strong>"Near you" distance</strong><span className="muted small">Worked out on your phone; your location isn't sent.</span></span>
+        <div className="seg">
+          {[1, 3, 10].map((km) => <button key={km} className={n.nearbyKm === km ? 'active' : ''} onClick={() => set({ nearbyKm: km })}>{km} km</button>)}
+        </div>
+      </div>
     </div>
   );
 }

@@ -9,7 +9,8 @@ import {
   TOMBSTONES_KEY, cloud, deleteAccount as cloudDeleteAccount, fetchUsername, isCloudId, mergeInteraction, pull, pushChanges,
   signPhotoUrls, updateUsername, type Tombstone,
 } from '../data/cloud';
-import { saveFile } from '../data/platform';
+import { isNative, saveFile } from '../data/platform';
+import { disableBackgroundNotifications, enableBackgroundNotifications, fetchServerActivity, markNotifySeen, markServerActivityRead, saveNotifyPosition, type ActivityItem } from '../data/notify';
 import { startLocation, type LocStatus } from '../data/location';
 import { createIdbRepository, requestPersistentStorage } from '../data/idbRepository';
 import type { Repository } from '../data/repository';
@@ -76,6 +77,10 @@ interface Ctx {
   importData: (file: File) => Promise<void>;
   resetAll: () => Promise<void>;
   requestLocation: () => void;
+  activity: ActivityItem[];
+  unread: number;
+  markActivityRead: () => Promise<void>;
+  setNotifications: (patch: Partial<Settings['notify']>) => Promise<boolean>;
 }
 
 const StoreContext = createContext<Ctx | null>(null);
@@ -90,6 +95,8 @@ const emptyIx = (snapId: string): Interaction => ({ snapId, liked: false, commen
 const COMMUNITY_CACHE = 'community-cache';
 const FIRST_RUN = 'first-run';
 const LAST_POSITION = 'last-position';
+const NEARBY_ACTIVITY = 'nearby-activity';
+const NEARBY_SEEN = 'nearby-seen';
 const SYNC_EVERY_MS = 3 * 60 * 1000;
 
 export function StoreProvider({ children, repo: injected }: { children: ReactNode; repo?: Repository }) {
@@ -109,6 +116,8 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
   const [firstRun, setFirstRun] = useState(() => Date.now());
   const [session, setSession] = useState<Session | null>(null);
   const [sync, setSync] = useState<SyncStatus>({ state: 'signed-out', lastSync: null, pending: 0 });
+  const [serverActivity, setServerActivity] = useState<ActivityItem[]>([]);
+  const [nearbyActivity, setNearbyActivity] = useState<ActivityItem[]>([]);
   const toastTimer = useRef<number>();
 
   // Latest values for async sync code (avoids stale closures).
@@ -140,6 +149,7 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
     setInteractions(data.interactions);
     setSettings({ ...DEFAULT_SETTINGS, ...(data.settings ?? {}) });
     setCommunity((await repo.getMeta<Snap[]>(COMMUNITY_CACHE)) ?? []);
+    setNearbyActivity((await repo.getMeta<ActivityItem[]>(NEARBY_ACTIVITY)) ?? []);
     let fr = await repo.getMeta<number>(FIRST_RUN);
     if (!fr) { fr = Date.now(); await repo.putMeta(FIRST_RUN, fr); }
     setFirstRun(fr);
@@ -187,6 +197,12 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
     savedAt.current = Date.now();
     repo.putMeta(LAST_POSITION, geo.point).catch(() => {});
   }, [geo.point, repo]);
+  const notifyPosAt = useRef(0);
+  useEffect(() => {
+    if (!geo.point || Date.now() - notifyPosAt.current < 5 * 60000) return;
+    notifyPosAt.current = Date.now();
+    saveNotifyPosition(geo.point.lat, geo.point.lng); // stays on the phone
+  }, [geo.point]);
   const here = useMemo(() => geo.point ?? lastKnown ?? { ...FALLBACK_CENTER }, [geo.point, lastKnown]);
   const radarCenter = useMemo(() => (travel ? { lat: travel.lat, lng: travel.lng, label: travel.label } : here), [travel, here]);
   const setTravel = useCallback((key: string | null) => setTravelState(key ? CITIES.find((c) => c.key === key) ?? null : null), []);
@@ -244,6 +260,31 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
 
       setCommunity(res.community);
       await repo.putMeta(COMMUNITY_CACHE, res.community);
+
+      // Activity: notifications on your cats, plus new cats near you (decided on the phone).
+      const acts = await fetchServerActivity();
+      setServerActivity(acts);
+      const seen = new Set((await repo.getMeta<string[]>(NEARBY_SEEN)) ?? []);
+      const firstRun = seen.size === 0;
+      const pos = geoRef.current.point;
+      const nb = live.current.settings.notify;
+      const fresh: ActivityItem[] = [];
+      for (const c of res.community) {
+        if (seen.has(c.id)) continue;
+        seen.add(c.id);
+        if (firstRun || !pos || !nb.nearby || Date.now() - c.createdAt > 24 * 3600000) continue;
+        const d = distanceKm(pos, c.location);
+        if (d <= nb.nearbyKm) fresh.push({ id: `near-${c.id}`, kind: 'nearby', snapId: c.id, at: Date.now(), read: false, text: `New cat near you: ${c.name} (${d < 1 ? `${Math.max(10, Math.round(d * 100) * 10)} m` : `${d.toFixed(1)} km`})` });
+      }
+      await repo.putMeta(NEARBY_SEEN, [...seen].slice(-2000));
+      if (fresh.length) {
+        const next = [...fresh, ...((await repo.getMeta<ActivityItem[]>(NEARBY_ACTIVITY)) ?? [])].slice(0, 50);
+        await repo.putMeta(NEARBY_ACTIVITY, next);
+        setNearbyActivity(next);
+      }
+      // The background job shouldn't repeat what the app just showed.
+      const maxId = acts.reduce((m, a) => Math.max(m, a.serverId ?? 0), 0);
+      markNotifySeen({ cursor: maxId, since: new Date().toISOString() });
       const paths = [...res.community, ...res.mineRemote, ...restored].map((x) => x.photoPath).filter((p): p is string => !!p);
       setCloudUrls(await signPhotoUrls([...new Set(paths)]));
 
@@ -328,12 +369,14 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
     if (error) throw new Error(/confirm/i.test(error.message) ? 'Confirm your email first: tap the link we sent you, then sign in.' : 'Wrong email or password.');
   }, []);
   const signOut = useCallback(async () => {
+    await disableBackgroundNotifications();
     await cloud().auth.signOut({ scope: 'local' });
     setCommunity([]);
     setCloudUrls({});
     await repo.putMeta(COMMUNITY_CACHE, []);
   }, [repo]);
   const deleteAccount = useCallback(async () => {
+    await disableBackgroundNotifications();
     await cloudDeleteAccount();
     // Local copies stay on this phone, marked as not uploaded.
     const reset = live.current.mine.map((s) => ({ ...s, syncedAt: null, photoPath: s.photoId ? null : s.photoPath }));
@@ -468,11 +511,47 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
 
   useEffect(() => { setSync((x) => ({ ...x, pending: pendingCount() })); }, [mine, interactions, pendingCount]);
 
+  // ---- Notifications ----
+  const activity = useMemo(() => [...serverActivity, ...nearbyActivity].sort((a, b) => b.at - a.at), [serverActivity, nearbyActivity]);
+  const unread = activity.filter((a) => !a.read).length;
+  const markActivityRead = useCallback(async () => {
+    const ids = serverActivity.filter((a) => !a.read && a.serverId).map((a) => a.serverId!) ;
+    setServerActivity((cur) => cur.map((a) => ({ ...a, read: true })));
+    const nb = nearbyActivity.map((a) => ({ ...a, read: true }));
+    setNearbyActivity(nb);
+    await repo.putMeta(NEARBY_ACTIVITY, nb);
+    try { await markServerActivityRead(ids); } catch { /* retried next time */ }
+  }, [serverActivity, nearbyActivity, repo]);
+
+  const setNotifications = useCallback(async (patch: Partial<Settings['notify']>) => {
+    const next = { ...live.current.settings.notify, ...patch, asked: true };
+    if (next.enabled && live.current.session) {
+      const maxId = serverActivity.reduce((m, a) => Math.max(m, a.serverId ?? 0), 0);
+      const ok = await enableBackgroundNotifications({ like: next.like, comment: next.comment, sighting: next.sighting, nearby: next.nearby }, next.nearbyKm, maxId).catch(() => false);
+      if (!ok) next.enabled = false;
+      if (geoRef.current.point) saveNotifyPosition(geoRef.current.point.lat, geoRef.current.point.lng);
+    } else if (!next.enabled) {
+      await disableBackgroundNotifications();
+    }
+    await updateSettings({ notify: next });
+    return next.enabled;
+  }, [serverActivity, updateSettings]);
+
+  // Offer notifications once after signing in on Android.
+  useEffect(() => {
+    if (!session || !isNative() || settings.notify.asked) return;
+    const t = window.setTimeout(() => {
+      setNotifications({ enabled: true }).then((on) => toast(on ? 'Notifications on: likes, comments, sightings and cats near you.' : 'Notifications are off. You can turn them on in Account & settings.'));
+    }, 2500);
+    return () => window.clearTimeout(t);
+  }, [session?.user.id, settings.notify.asked]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const value: Ctx = {
     ready, settings, geo, here, radarCenter, travel, setTravel, snaps, points, persisted, toast, toastMsg,
     account, sync, syncNow, getBestFix: () => bestFix(recentFixes.current), signUp, changePassword, signIn, signOut, deleteAccount,
     updateSettings, setUsername, addSnap, editSnap, deleteSnap, toggleLike, addComment, logSighting, exportData, importData, resetAll,
     requestLocation: startWatch,
+    activity, unread, markActivityRead, setNotifications,
   };
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

@@ -80,6 +80,8 @@ export interface Settings {
   delaySightings: boolean;
   /** Opt-in: blur your snap and sighting locations by about 100 m. */
   blurLocations: boolean;
+  /** Notifications: background checks on this phone, which kinds, and the "near you" radius. */
+  notify: { enabled: boolean; asked: boolean; like: boolean; comment: boolean; sighting: boolean; nearby: boolean; nearbyKm: number };
   plus: boolean; // mock subscription flag for field testing
   plan: 'year' | 'month';
   onboarded: boolean;
@@ -92,6 +94,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultVisibility: 'shared',
   delaySightings: false,
   blurLocations: false,
+  notify: { enabled: false, asked: false, like: true, comment: true, sighting: true, nearby: true, nearbyKm: 3 },
   plus: false,
   plan: 'year',
   onboarded: false,

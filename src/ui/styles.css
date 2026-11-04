@@ -582,3 +582,22 @@ input, select, textarea { font: inherit; color: var(--ink); width: 100%; border:
 .name-edit { display: flex; gap: 8px; }
 .name-edit input { flex: 1; min-width: 0; }
 form.set-row.column { gap: 8px; }
+
+/* Activity */
+.bell-btn { position: relative; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; }
+.bell-btn .i { width: 18px; height: 18px; }
+.bell-badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--danger); color: #fff; font-size: .62rem; font-weight: 800; display: grid; place-items: center; border: 2px solid var(--paper); }
+.activity-list { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 8px; }
+.activity-list li:not(.empty) { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: 14px; padding: 10px 12px; box-shadow: var(--shadow); cursor: pointer; }
+.activity-list li.unread { box-shadow: var(--shadow), inset 3px 0 0 var(--accent); }
+.activity-list .grow { display: grid; gap: 2px; }
+.act-icon { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--sunk); }
+.act-icon .i { width: 18px; height: 18px; }
+.act-icon.like { color: #e0435a; }
+.act-icon.comment { color: var(--r2); }
+.act-icon.sighting { color: var(--good); }
+.act-icon.nearby { color: var(--accent-deep); }
+.unread-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); flex: none; }
+.notify-cta { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1.5px solid var(--accent); border-radius: var(--radius); padding: 12px; margin-top: 12px; }
+.notify-cta > span { flex: 1; display: grid; gap: 2px; }
+.notify-cta > .i { color: var(--accent-deep); flex: none; }

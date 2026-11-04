@@ -9,10 +9,11 @@ import { Feed } from './screens/Feed';
 import { Plus } from './screens/Plus';
 import { Radar, type RadarFilters } from './screens/Radar';
 import { Settings } from './screens/Settings';
+import { Activity } from './screens/Activity';
 import { SnapForm } from './screens/SnapForm';
 
-type View = 'feed' | 'radar' | 'snap' | 'dex' | 'plus' | 'settings';
-const VIEWS: View[] = ['feed', 'radar', 'snap', 'dex', 'plus', 'settings'];
+type View = 'feed' | 'radar' | 'snap' | 'dex' | 'plus' | 'settings' | 'activity';
+const VIEWS: View[] = ['feed', 'radar', 'snap', 'dex', 'plus', 'settings', 'activity'];
 const readHash = (): View => {
   const h = location.hash.replace('#', '') as View;
   return VIEWS.includes(h) ? h : 'feed';
@@ -20,7 +21,7 @@ const readHash = (): View => {
 
 export function App() {
   const store = useStore();
-  const { ready, settings, toastMsg, toast, snaps, account, sync } = store;
+  const { ready, settings, toastMsg, toast, snaps, account, sync, unread } = store;
   const syncDot = !account ? 'none' : sync.state === 'error' ? 'bad' : sync.state === 'offline' || sync.pending > 0 ? 'wait' : 'ok';
   const syncLabel = sync.state === 'error' ? 'sync problem' : sync.state === 'offline' ? 'offline' : sync.pending > 0 ? `${sync.pending} waiting to sync` : 'synced';
   const [view, setView] = useState<View>(readHash);
@@ -78,6 +79,9 @@ export function App() {
         </button>
         <div className="topbar-right">
           <button className={`plus-chip ${settings.plus ? 'on' : ''}`} onClick={() => go('plus')}><Icon name="crown" />{settings.plus ? 'Plus' : 'Get Plus'}</button>
+          <button className="bell-btn" onClick={() => go('activity')} aria-label={unread ? `Activity, ${unread} new` : 'Activity'}>
+            <Icon name="bell" />{unread > 0 && <span className="bell-badge">{unread > 9 ? '9+' : unread}</span>}
+          </button>
           <button className="account-btn" onClick={() => go('settings')} aria-label={account ? `Account and settings, ${syncLabel}` : 'Sign in, account and settings'}>
             <span className="account-avatar">{account ? settings.username.charAt(0).toUpperCase() : <Icon name="globe" />}<i className={`sync-dot ${syncDot}`} /></span>
             <span className="account-label">{account ? 'Account' : 'Sign in'}</span>
@@ -92,6 +96,7 @@ export function App() {
         {view === 'dex' && <Catdex onOpen={setOpenId} onPlus={() => go('plus')} onSettings={() => go('settings')} onSnap={() => go('snap')} />}
         {view === 'plus' && <Plus onActivated={() => go('radar')} />}
         {view === 'settings' && <Settings onBack={() => go('dex')} />}
+        {view === 'activity' && <Activity onOpen={setOpenId} onSettings={() => go('settings')} />}
       </main>
 
       <nav className="tabbar" aria-label="Main">
