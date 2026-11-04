@@ -11,6 +11,9 @@ import { LocationHelp } from '../components/LocationHelp';
 import { MapPicker } from '../components/MapPicker';
 import { PhotoCropper } from '../components/PhotoCropper';
 import { isNative } from '../../data/platform';
+import { readPhotoMeta } from '../../data/photoMeta';
+import { pickGalleryPhoto } from '../../data/photoPick';
+import { timeAgo } from '../../core/geo';
 
 interface Props { editId: string | null; onDone: (id: string) => void; onCancelEdit: () => void }
 
@@ -30,6 +33,8 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
   const [manual, setManual] = useState<GeoPoint | null>(null);
   const [picking, setPicking] = useState(false);
   const [cropping, setCropping] = useState(false);
+  /** Set when the pin came from the photo's own GPS metadata. */
+  const [fromPhoto, setFromPhoto] = useState<{ takenAt: number | null } | null>(null);
   const [tagInput, setTagInput] = useState('');
   const [showAllTags, setShowAllTags] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -68,11 +73,35 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
   const sketch = useMemo(() => catSVG({ coat: d.coat, eyes: d.eyes, bg: HABITATS[d.habitat].bg }), [d.coat, d.eyes, d.habitat]);
   const forecast = rarityOf(d, editing ? editing.sightingCount : 1);
 
-  const pick = (f: Blob | undefined) => {
+  const pick = (f: Blob | undefined, opts: { hint?: GeoPoint | null; fromCamera?: boolean } = {}) => {
     if (!f) return;
     if (f.type && !f.type.startsWith('image/')) { toast('Pick a photo (JPEG, PNG or HEIC).'); return; }
     setPhoto(f);
     setPreview(URL.createObjectURL(f));
+    if (editing) return;
+    // Use the location stored in the photo itself (read here, never uploaded).
+    readPhotoMeta(f).then((meta) => {
+      const loc = meta.location ?? opts.hint; // full-precision tags first; native reading as backup
+      if (!loc) {
+        if (!opts.fromCamera) toast("This photo has no location saved. Using your GPS, or set the spot yourself.");
+        return;
+      }
+      // For a fresh camera shot, live GPS is usually as good; only use the photo's tag as a backup.
+      if (opts.fromCamera && freshFixRef.current) return;
+      setManual(loc);
+      setFromPhoto({ takenAt: meta.takenAt });
+      toast(`Location taken from the photo${meta.takenAt ? ` (${timeAgo(meta.takenAt)})` : ''}`);
+    });
+  };
+
+  const pickFromLibrary = async () => {
+    if (!isNative()) { document.getElementById('libraryInput')?.click(); return; }
+    try {
+      const r = await pickGalleryPhoto();
+      if (r) pick(r.blob, { hint: r.location });
+    } catch {
+      document.getElementById('libraryInput')?.click(); // fall back to the standard picker
+    }
   };
 
   // In the Android app, open the camera app directly (a plain file input can
@@ -83,7 +112,7 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
       const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
       const shot = await Camera.getPhoto({ source: CameraSource.Camera, resultType: CameraResultType.Uri, quality: 90, correctOrientation: true, saveToGallery: false });
       if (!shot.webPath) return;
-      pick(await (await fetch(shot.webPath)).blob());
+      pick(await (await fetch(shot.webPath)).blob(), { fromCamera: true });
     } catch (err) {
       const m = String((err as Error)?.message ?? err);
       if (/cancel/i.test(m)) return;
@@ -106,7 +135,7 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
       } else {
         const id = await addSnap(draft, photo ?? null, manual);
         toast(`Posted. ${forecast.name} find, +${forecast.points} pts`);
-        setD(blank(settings.defaultVisibility, settings.blurLocations)); setPhoto(undefined); setPreview(null); setConfirmed(false); setManual(null);
+        setD(blank(settings.defaultVisibility, settings.blurLocations)); setPhoto(undefined); setPreview(null); setConfirmed(false); setManual(null); setFromPhoto(null);
         onDone(id);
       }
     } catch (err) {
@@ -125,6 +154,8 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
     return () => window.clearInterval(t);
   }, [editing, getBestFix, geo.updatedAt]);
   const freshFix = !!best && Date.now() - best.at <= POST_FRESH_MS;
+  const freshFixRef = useRef(freshFix);
+  freshFixRef.current = freshFix;
   const acc = best ? Math.round(best.accuracy) : null;
   const accClass = acc == null ? '' : acc <= 15 ? 'good' : acc <= 50 ? 'ok' : 'poor';
   const blurNote = d.blurred ? ', blurred about 100 m before saving' : ', saved exactly';
@@ -152,16 +183,16 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
           </div>
         )}
 
-        <input ref={fileRef} id="photoInput" type="file" accept="image/*" capture="environment" hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ''; }} />
+        <input ref={fileRef} id="photoInput" type="file" accept="image/*" capture="environment" hidden onChange={(e) => { pick(e.target.files?.[0], { fromCamera: true }); e.target.value = ''; }} />
         <input id="libraryInput" type="file" accept="image/*" hidden onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ''; }} />
         <div className="photo-preview">
           {preview ? <img src={preview} alt="Your photo" /> : <div className="sketch" dangerouslySetInnerHTML={{ __html: sketch }} />}
           {!preview && <span className="muted small">No photo? We'll use this sketch, drawn from the coat and eyes you pick.</span>}
           <div className="photo-actions">
             <button type="button" className="pill-btn dark" onClick={takePhoto}><Icon name="camera" />{preview ? 'Retake' : 'Take photo'}</button>
-            <button type="button" className="pill-btn" onClick={() => document.getElementById('libraryInput')?.click()}><Icon name="image" />From library</button>
+            <button type="button" className="pill-btn" onClick={pickFromLibrary}><Icon name="image" />From library</button>
             {preview && <button type="button" className="pill-btn" onClick={() => setCropping(true)}><Icon name="image" />Crop</button>}
-            {preview && <button type="button" className="pill-btn" onClick={() => { setPhoto(null); setPreview(null); }}><Icon name="trash" />Remove</button>}
+            {preview && <button type="button" className="pill-btn" onClick={() => { setPhoto(null); setPreview(null); if (fromPhoto) { setManual(null); setFromPhoto(null); } }}><Icon name="trash" />Remove</button>}
           </div>
         </div>
 
@@ -276,9 +307,11 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
             {manual && <button type="button" className="pill-btn" onClick={() => setManual(null)}>Undo</button>}
           </div>
         ) : manual ? (
-          <div className="loc-line"><Icon name="pin" /><span>Pinned at the spot you chose on the map{blurNote}.</span>
+          <div className="loc-line"><Icon name="pin" /><span>{fromPhoto
+              ? <>Pinned where the photo was taken{fromPhoto.takenAt ? <> ({timeAgo(fromPhoto.takenAt)})</> : null}, read from its location data{blurNote}.</>
+              : <>Pinned at the spot you chose{blurNote}.</>}</span>
             <button type="button" className="pill-btn" onClick={() => setPicking(true)}>Change</button>
-            <button type="button" className="pill-btn" onClick={() => setManual(null)}>Use GPS</button>
+            <button type="button" className="pill-btn" onClick={() => { setManual(null); setFromPhoto(null); }}>Use GPS</button>
           </div>
         ) : freshFix ? (
           <div className="loc-line"><Icon name="pin" /><span>Pinned at your GPS position{blurNote}. Accuracy <strong className={`acc ${accClass}`}>±{acc} m</strong>
@@ -296,7 +329,7 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
 
         <button type="submit" className="primary-btn" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Post snap'}</button>
       </form>
-      {picking && <MapPicker start={editing ? editing.location : geo.point ?? here} initial={manual ?? (editing ? editing.location : null)} onCancel={() => setPicking(false)} onDone={(p) => { setManual(p); setPicking(false); }} />}
+      {picking && <MapPicker start={editing ? editing.location : geo.point ?? here} initial={manual ?? (editing ? editing.location : null)} onCancel={() => setPicking(false)} onDone={(p) => { setManual(p); setFromPhoto(null); setPicking(false); }} />}
       {cropping && preview && (
         <PhotoCropper src={preview} onCancel={() => setCropping(false)}
           onDone={(blob) => { setPhoto(blob); setPreview(URL.createObjectURL(blob)); setCropping(false); }} />

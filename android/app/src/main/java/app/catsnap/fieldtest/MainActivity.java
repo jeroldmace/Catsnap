@@ -16,6 +16,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(CatLocationPlugin.class);
+        registerPlugin(CatPhotoPlugin.class);
         super.onCreate(savedInstanceState);
 
         // Draw edge-to-edge, then pad the content for the status bar, the

@@ -14,6 +14,7 @@
 
 ## Always on
 - **Accurate pins:** a snap uses the most accurate GPS fix from the last minute. Owners can move a pin when editing.
+- **Photo location read on the phone only:** when you pick a photo, the app reads its GPS tag on the phone to place the pin (Android asks for "access photo locations" for this). The tag itself is never uploaded.
 - **Photo metadata stripped:** photos are re-encoded on the phone, which removes EXIF data, including embedded GPS.
 - **Sign-in required:** signed-out visitors can't read anything. The database refuses them.
 - **Server-enforced access rules** (row level security):
