@@ -12,7 +12,8 @@ import { RarityBadge } from '../components/bits';
 import { Icon } from '../components/Icon';
 import { catSVG } from '../../core/catArt';
 import { HABITATS } from '../../core/catalog';
-import { locationMessage } from '../../data/location';
+import { STALE_MS, locationMessage } from '../../data/location';
+import { LocationHelp } from '../components/LocationHelp';
 
 export interface RadarFilters { radiusKm: number; ageH: number; minTier: number; focusId: string | null }
 interface Props { filters: RadarFilters; setFilters: (f: RadarFilters) => void; onOpen: (id: string) => void; onPlus: (feature?: string) => void }
@@ -46,6 +47,7 @@ export function Radar({ filters, setFilters, onOpen, onPlus }: Props) {
   const zoom = focus ? 16 : zoomFor(filters.radiusKm);
 
   const status = travel ? `Travel mode · ${travel.label}`
+    : geo.status === 'live' && geo.updatedAt && Date.now() - geo.updatedAt > STALE_MS ? `Last known position · ${Math.round((Date.now() - geo.updatedAt) / 60000)} min old`
     : geo.status === 'live' ? `GPS live · ±${Math.round(geo.accuracy ?? 0)} m`
     : geo.status === 'pending' ? 'Finding you…'
     : geo.status === 'searching' ? 'Searching for GPS…'
@@ -73,17 +75,11 @@ export function Radar({ filters, setFilters, onOpen, onPlus }: Props) {
         </div>
         <button className="icon-btn" title="Centre on me" aria-label="Centre on me" onClick={() => {
           setTravel(null); setFilters({ ...filters, focusId: null }); requestLocation();
-          if (geo.status !== 'live') toast(locationMessage(geo.status, geo.accuracy, !!geo.point));
+          if (geo.status !== 'live') toast(locationMessage(geo.status, geo.accuracy, !!geo.point, geo.updatedAt));
         }}><Icon name="locate" /></button>
       </div>
 
-      {!travel && geo.status !== 'live' && geo.status !== 'pending' && (
-        <div className="loc-help">
-          <Icon name="locate" />
-          <span>{locationMessage(geo.status, geo.accuracy, !!geo.point)} Until then the radar shows the demo city.</span>
-          <button className="pill-btn" onClick={requestLocation}>Retry</button>
-        </div>
-      )}
+      {!travel && geo.status !== 'live' && geo.status !== 'pending' && <LocationHelp suffix={geo.point ? '' : 'Until then the radar is centred on a default city.'} />}
       <div className="view-toggle seg">
         <button className={settings.radarView === 'map' ? 'active' : ''} onClick={() => updateSettings({ radarView: 'map' })}><Icon name="map" />Map</button>
         <button className={settings.radarView === 'scope' ? 'active' : ''} onClick={() => updateSettings({ radarView: 'scope' })}><Icon name="radar" />Radar</button>

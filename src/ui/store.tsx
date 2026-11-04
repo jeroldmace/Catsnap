@@ -16,7 +16,9 @@ import type { Repository } from '../data/repository';
 import { processPhoto } from '../data/photos';
 
 export type GeoStatus = LocStatus;
-export interface GeoState { status: GeoStatus; point: GeoPoint | null; accuracy: number | null; updatedAt: number | null }
+export interface GeoState { status: GeoStatus; point: GeoPoint | null; accuracy: number | null; updatedAt: number | null; source?: string; detail?: string }
+/** A snap's location must come from a fix at most this old (or be picked on the map). */
+export const POST_FRESH_MS = 10 * 60 * 1000;
 
 export type SyncState = 'signed-out' | 'idle' | 'syncing' | 'offline' | 'error';
 export interface SyncStatus { state: SyncState; lastSync: number | null; pending: number; message?: string }
@@ -61,7 +63,7 @@ interface Ctx {
   deleteAccount: () => Promise<void>;
   updateSettings: (patch: Partial<Settings>) => Promise<void>;
   setUsername: (name: string) => Promise<void>;
-  addSnap: (draft: SnapDraft, photo: Blob | null) => Promise<string>;
+  addSnap: (draft: SnapDraft, photo: Blob | null, manualPoint?: GeoPoint | null) => Promise<string>;
   editSnap: (id: string, draft: SnapDraft, photo: Blob | null | undefined) => Promise<void>;
   deleteSnap: (id: string) => Promise<void>;
   toggleLike: (id: string) => Promise<void>;
@@ -84,6 +86,7 @@ const uid = () => crypto.randomUUID();
 const emptyIx = (snapId: string): Interaction => ({ snapId, liked: false, comments: [], sightings: [] });
 const COMMUNITY_CACHE = 'community-cache';
 const FIRST_RUN = 'first-run';
+const LAST_POSITION = 'last-position';
 const SYNC_EVERY_MS = 3 * 60 * 1000;
 
 export function StoreProvider({ children, repo: injected }: { children: ReactNode; repo?: Repository }) {
@@ -153,8 +156,10 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
     stopLoc.current?.();
     setGeo((g) => (g.status === 'live' ? g : { ...g, status: 'pending' }));
     stopLoc.current = startLocation(
-      (f) => setGeo({ status: 'live', point: { lat: f.lat, lng: f.lng }, accuracy: f.accuracy, updatedAt: f.at }),
-      (status) => setGeo((g) => ({ ...g, status: status === 'searching' && g.point ? 'live' : status })),
+      // Keep the newest fix; an older cached position never replaces a newer one.
+      (f) => setGeo((g) => (g.updatedAt && f.at < g.updatedAt && g.point ? { ...g, status: 'live' }
+        : { status: 'live', point: { lat: f.lat, lng: f.lng }, accuracy: f.accuracy, updatedAt: f.at, source: f.source })),
+      (status, detail) => setGeo((g) => ({ ...g, status: status === 'searching' && g.point ? 'live' : status, detail })),
     );
   }, []);
   useEffect(() => {
@@ -164,7 +169,17 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
     return () => { stopLoc.current?.(); document.removeEventListener('visibilitychange', onVisible); };
   }, [startWatch]);
 
-  const here = useMemo(() => geo.point ?? { ...FALLBACK_CENTER }, [geo.point]);
+  // Remember the last position on this phone (only here, never uploaded) so maps
+  // open near you even before a fresh GPS fix.
+  const [lastKnown, setLastKnown] = useState<GeoPoint | null>(null);
+  useEffect(() => { repo.getMeta<GeoPoint>(LAST_POSITION).then((p) => p && setLastKnown(p)).catch(() => {}); }, [repo]);
+  const savedAt = useRef(0);
+  useEffect(() => {
+    if (!geo.point || Date.now() - savedAt.current < 60000) return;
+    savedAt.current = Date.now();
+    repo.putMeta(LAST_POSITION, geo.point).catch(() => {});
+  }, [geo.point, repo]);
+  const here = useMemo(() => geo.point ?? lastKnown ?? { ...FALLBACK_CENTER }, [geo.point, lastKnown]);
   const radarCenter = useMemo(() => (travel ? { lat: travel.lat, lng: travel.lng, label: travel.label } : here), [travel, here]);
   const setTravel = useCallback((key: string | null) => setTravelState(key ? CITIES.find((c) => c.key === key) ?? null : null), []);
 
@@ -338,8 +353,10 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
     return id;
   }, [repo]);
 
-  const addSnap = useCallback(async (draft: SnapDraft, photo: Blob | null) => {
-    if (!geo.point) throw new Error("Can't post yet: no location fix. Your entry is kept; tap Post again once the location line says GPS is live.");
+  const addSnap = useCallback(async (draft: SnapDraft, photo: Blob | null, manualPoint?: GeoPoint | null) => {
+    const fresh = geo.point && geo.updatedAt && Date.now() - geo.updatedAt <= POST_FRESH_MS ? geo.point : null;
+    const where = manualPoint ?? fresh;
+    if (!where) throw new Error('No recent GPS fix yet. Tap "Set on map" to pick the spot, or wait for GPS. Your entry is kept.');
     const t = Date.now();
     const snap: Snap = {
       ...draft,
@@ -348,7 +365,7 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
       author: live.current.settings.username,
       createdAt: t,
       updatedAt: t,
-      location: blurPoint(geo.point), // the exact point is never stored
+      location: blurPoint(where), // the exact point is never stored
       photoId: photo ? await savePhoto(photo) : null,
       photoPath: null,
       syncedAt: null,
@@ -358,7 +375,7 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
     setMine((m) => [snap, ...m]);
     queueSync();
     return snap.id;
-  }, [geo.point, savePhoto, repo, queueSync]);
+  }, [geo.point, geo.updatedAt, savePhoto, repo, queueSync]);
 
   const addTombstone = useCallback(async (t: Tombstone) => {
     const list = (await repo.getMeta<Tombstone[]>(TOMBSTONES_KEY)) ?? [];

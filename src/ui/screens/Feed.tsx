@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { HABITATS } from '../../core/catalog';
+import { tagKey, tagPopularity } from '../../core/tags';
 import { formatDistance, timeAgo } from '../../core/geo';
 import type { HabitatKey } from '../../core/types';
 import { useStore, type SnapView } from '../store';
@@ -27,8 +28,12 @@ export function Feed({ onOpen, onPlus, onSnap }: Props) {
   const { snaps, toggleLike, settings, toast, account } = useStore();
   const [sort, setSort] = useState<Sort>('recent');
   const [habitat, setHabitat] = useState<HabitatKey | null>(null);
+  const [tag, setTag] = useState<string | null>(null);
+  const popularTags = useMemo(() => tagPopularity(snaps.filter((s) => s.source !== 'example'), []).filter((t) => t.count > 0).slice(0, 15), [snaps]);
   const featured = snaps.find((s) => s.featured);
-  const list = useMemo(() => snaps.filter((s) => !s.featured && (!habitat || s.habitat === habitat)).sort(sorters[sort]), [snaps, habitat, sort]);
+  const list = useMemo(() => snaps
+    .filter((s) => !s.featured && (!habitat || s.habitat === habitat) && (!tag || s.tags.some((t) => tagKey(t) === tagKey(tag))))
+    .sort(sorters[sort]), [snaps, habitat, tag, sort]);
   const mineCount = snaps.filter((s) => s.source === 'mine').length;
 
   return (
@@ -75,6 +80,17 @@ export function Feed({ onOpen, onPlus, onSnap }: Props) {
           </button>
         ))}
       </div>
+
+      {popularTags.length > 0 && (
+        <div className="chips small" aria-label="Popular tags">
+          <span className="chips-label">Popular tags</span>
+          {popularTags.map((t) => (
+            <button key={t.tag} className={`chip ${tag && tagKey(tag) === tagKey(t.tag) ? 'active' : ''}`} onClick={() => setTag(tag && tagKey(tag) === tagKey(t.tag) ? null : t.tag)}>
+              #{t.tag}<span className="tag-count">{t.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="feed">
         {list.length === 0 && <p className="empty">No cats here yet. {account ? 'Snap one, or check back as other spotters share theirs.' : 'Snap one, or sign in (Catdex → Settings) to see cats shared by other spotters.'}</p>}

@@ -14,6 +14,9 @@ Each field-test APK is signed with a new key, so Android won't install it over t
 3. Install the new APK and open it.
 4. **Catdex → Settings → Restore backup** and pick the file from step 1. Your snaps, photos, likes, comments and settings come back.
 
+## Location on Android
+The app uses its own small native module (`CatLocationPlugin.java`) that reads Android's satellite GPS and Wi-Fi/mobile-network positions directly. It doesn't depend on Google Play services, so it also works where Google's location service doesn't (for example in mainland China). Google's fused location runs alongside when available, and the first good fix wins. If no fix arrives, you can set the spot on a map when posting.
+
 ## Differences from the web version
 - **Save backup** opens Android's share sheet, so you can save the file to Drive or Files or email it.
 - Map tiles need a connection. Areas you've already viewed are cached by the system WebView.

@@ -20,7 +20,9 @@ const readHash = (): View => {
 
 export function App() {
   const store = useStore();
-  const { ready, settings, points, toastMsg, toast, snaps } = store;
+  const { ready, settings, toastMsg, toast, snaps, account, sync } = store;
+  const syncDot = !account ? 'none' : sync.state === 'error' ? 'bad' : sync.state === 'offline' || sync.pending > 0 ? 'wait' : 'ok';
+  const syncLabel = sync.state === 'error' ? 'sync problem' : sync.state === 'offline' ? 'offline' : sync.pending > 0 ? `${sync.pending} waiting to sync` : 'synced';
   const [view, setView] = useState<View>(readHash);
   const [openId, setOpenId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
@@ -76,7 +78,10 @@ export function App() {
         </button>
         <div className="topbar-right">
           <button className={`plus-chip ${settings.plus ? 'on' : ''}`} onClick={() => go('plus')}><Icon name="crown" />{settings.plus ? 'Plus' : 'Get Plus'}</button>
-          <span className="points-pill" title="Your snap points">{points} pts</span>
+          <button className="account-btn" onClick={() => go('settings')} aria-label={account ? `Account and settings, ${syncLabel}` : 'Sign in, account and settings'}>
+            <span className="account-avatar">{account ? settings.username.charAt(0).toUpperCase() : <Icon name="globe" />}<i className={`sync-dot ${syncDot}`} /></span>
+            <span className="account-label">{account ? 'Account' : 'Sign in'}</span>
+          </button>
         </div>
       </header>
 

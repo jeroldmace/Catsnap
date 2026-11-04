@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { catSVG } from '../../core/catArt';
-import { COATS, EYES, HABITATS, RATING_KEYS, TAGS } from '../../core/catalog';
+import { COATS, EYES, HABITATS, RATING_KEYS } from '../../core/catalog';
+import { MAX_TAGS, addTag, tagKey, tagPopularity } from '../../core/tags';
 import { rarityOf } from '../../core/rules';
-import type { CoatKey, EyeKey, HabitatKey, Ratings, Visibility } from '../../core/types';
+import type { CoatKey, EyeKey, GeoPoint, HabitatKey, Ratings, Visibility } from '../../core/types';
 import { VISIBILITY_LABEL } from './Settings';
-import { useStore, type SnapDraft } from '../store';
+import { POST_FRESH_MS, useStore, type SnapDraft } from '../store';
 import { Icon, Paw } from '../components/Icon';
-import { locationMessage } from '../../data/location';
+import { LocationHelp } from '../components/LocationHelp';
+import { MapPicker } from '../components/MapPicker';
 
 interface Props { editId: string | null; onDone: (id: string) => void; onCancelEdit: () => void }
 
@@ -16,14 +18,19 @@ const blank = (visibility: Visibility = 'shared'): SnapDraft => ({
 });
 
 export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
-  const { snaps, addSnap, editSnap, geo, toast, requestLocation, settings, account } = useStore();
+  const { snaps, addSnap, editSnap, geo, toast, settings, account, here } = useStore();
   const editing = editId ? snaps.find((s) => s.id === editId && s.source === 'mine') ?? null : null;
   const [d, setD] = useState<SnapDraft>(() => blank(settings.defaultVisibility));
   const [photo, setPhoto] = useState<Blob | null | undefined>(undefined); // undefined = unchanged (edit)
   const [preview, setPreview] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [manual, setManual] = useState<GeoPoint | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [tagInput, setTagInput] = useState('');
+  const [showAllTags, setShowAllTags] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const popular = useMemo(() => tagPopularity(snaps.filter((s) => s.source !== 'example')), [snaps]);
 
   // Load the snap being edited, or reset for a new one.
   useEffect(() => {
@@ -43,7 +50,17 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
 
   const set = <K extends keyof SnapDraft>(k: K, v: SnapDraft[K]) => setD((x) => ({ ...x, [k]: v }));
   const setRating = (k: keyof Ratings, v: number) => setD((x) => ({ ...x, ratings: { ...x.ratings, [k]: v } }));
-  const toggleTag = (t: string) => setD((x) => ({ ...x, tags: x.tags.includes(t) ? x.tags.filter((y) => y !== t) : [...x.tags, t] }));
+  const toggleTag = (t: string) => setD((x) => {
+    if (x.tags.some((y) => tagKey(y) === tagKey(t))) return { ...x, tags: x.tags.filter((y) => tagKey(y) !== tagKey(t)) };
+    if (x.tags.length >= MAX_TAGS) { toast(`Up to ${MAX_TAGS} tags per snap.`); return x; }
+    return { ...x, tags: addTag(x.tags, t) };
+  });
+  const submitTag = () => {
+    const next = addTag(d.tags, tagInput);
+    if (next === d.tags && tagInput.trim()) toast(d.tags.length >= MAX_TAGS ? `Up to ${MAX_TAGS} tags per snap.` : 'That tag is already added or empty.');
+    set('tags', next);
+    setTagInput('');
+  };
   const sketch = useMemo(() => catSVG({ coat: d.coat, eyes: d.eyes, bg: HABITATS[d.habitat].bg }), [d.coat, d.eyes, d.habitat]);
   const forecast = rarityOf(d, editing ? editing.sightingCount : 1);
 
@@ -66,9 +83,9 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
         toast('Snap updated');
         onDone(editing.id);
       } else {
-        const id = await addSnap(draft, photo ?? null);
+        const id = await addSnap(draft, photo ?? null, manual);
         toast(`Posted. ${forecast.name} find, +${forecast.points} pts`);
-        setD(blank(settings.defaultVisibility)); setPhoto(undefined); setPreview(null); setConfirmed(false);
+        setD(blank(settings.defaultVisibility)); setPhoto(undefined); setPreview(null); setConfirmed(false); setManual(null);
         onDone(id);
       }
     } catch (err) {
@@ -78,10 +95,7 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
     }
   };
 
-  const locLine = editing ? 'Location stays where you first snapped this cat.'
-    : geo.point ? `Pinned at your GPS position (±${Math.round(geo.accuracy ?? 0)} m), blurred about 100 m before saving.`
-    : `${locationMessage(geo.status, geo.accuracy, false)} You can fill in the entry meanwhile; posting needs a location.`;
-  const locBad = !editing && !geo.point && (geo.status === 'off' || geo.status === 'denied');
+  const freshFix = !!geo.point && !!geo.updatedAt && Date.now() - geo.updatedAt <= POST_FRESH_MS;
 
   return (
     <section className="view" aria-label={editing ? 'Edit snap' : 'Snap a cat'}>
@@ -171,9 +185,26 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
         </div>
 
         <div className="field">
-          <label>Personality</label>
+          <label htmlFor="tagInput">Tags <span className="muted small">({d.tags.length}/{MAX_TAGS}) · most popular first</span></label>
+          {d.tags.length > 0 && (
+            <div className="tag-picker chosen">
+              {d.tags.map((t) => <button type="button" key={t} className="active" aria-label={`Remove tag ${t}`} onClick={() => toggleTag(t)}>{t} <Icon name="x" /></button>)}
+            </div>
+          )}
+          <div className="tag-add">
+            <input id="tagInput" value={tagInput} maxLength={30} placeholder="Add your own tag, e.g. Loves boxes"
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); submitTag(); } }} />
+            <button type="button" className="pill-btn" onClick={submitTag} disabled={!tagInput.trim()}><Icon name="plus" />Add</button>
+          </div>
           <div className="tag-picker">
-            {TAGS.map((t) => <button type="button" key={t} className={d.tags.includes(t) ? 'active' : ''} aria-pressed={d.tags.includes(t)} onClick={() => toggleTag(t)}>{t}</button>)}
+            {popular.filter((p) => !d.tags.some((t) => tagKey(t) === tagKey(p.tag)))
+              .filter((p) => !tagInput.trim() || tagKey(p.tag).includes(tagKey(tagInput.trim())))
+              .slice(0, showAllTags ? 200 : 16)
+              .map((p) => (
+                <button type="button" key={p.tag} onClick={() => toggleTag(p.tag)}>{p.tag}{p.count > 0 && <span className="tag-count">{p.count}</span>}</button>
+              ))}
+            {!showAllTags && popular.length > 16 && <button type="button" className="tag-more" onClick={() => setShowAllTags(true)}>More…</button>}
           </div>
         </div>
 
@@ -201,13 +232,28 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
           </label>
         )}
 
-        <div className={`loc-line ${locBad ? 'warn' : ''}`}><Icon name="pin" /><span>{locLine}</span>
-          {!editing && !geo.point && <button type="button" className="pill-btn" onClick={requestLocation}>Retry</button>}
-        </div>
+        {editing ? (
+          <div className="loc-line"><Icon name="pin" /><span>Location stays where you first snapped this cat.</span></div>
+        ) : manual ? (
+          <div className="loc-line"><Icon name="pin" /><span>Pinned at the spot you chose on the map, blurred about 100 m before saving.</span>
+            <button type="button" className="pill-btn" onClick={() => setPicking(true)}>Change</button>
+            <button type="button" className="pill-btn" onClick={() => setManual(null)}>Use GPS</button>
+          </div>
+        ) : freshFix ? (
+          <div className="loc-line"><Icon name="pin" /><span>Pinned at your GPS position (±{Math.round(geo.accuracy ?? 0)} m), blurred about 100 m before saving.</span>
+            <button type="button" className="pill-btn" onClick={() => setPicking(true)}>Set on map</button>
+          </div>
+        ) : (
+          <div className="field">
+            <LocationHelp suffix="You can keep filling in the entry." />
+            <button type="button" className="pill-btn dark" onClick={() => setPicking(true)}><Icon name="map" />Set the spot on a map instead</button>
+          </div>
+        )}
         {!editing && <p className="forecast">This looks like a <strong>{forecast.name}</strong> find: +{forecast.points} pts.</p>}
 
         <button type="submit" className="primary-btn" disabled={saving}>{saving ? 'Saving…' : editing ? 'Save changes' : 'Post snap'}</button>
       </form>
+      {picking && <MapPicker start={geo.point ?? here} initial={manual} onCancel={() => setPicking(false)} onDone={(p) => { setManual(p); setPicking(false); }} />}
     </section>
   );
 }

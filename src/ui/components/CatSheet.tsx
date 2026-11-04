@@ -134,7 +134,9 @@ export function CatSheet({ id, onClose, onEdit, onShowOnRadar }: Props) {
             await addComment(s.id, t);
             setComment('');
           }}>
-            <input id="commentText" value={comment} onChange={(e) => setComment(e.target.value)} maxLength={200} placeholder="Add a comment…" />
+            <input id="commentText" value={comment} onChange={(e) => setComment(e.target.value)} maxLength={200} placeholder="Add a comment…"
+              enterKeyHint="send"
+              onFocus={(e) => { const el = e.currentTarget; window.setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 350); }} />
             <button type="submit">Post</button>
           </form>
         </div>

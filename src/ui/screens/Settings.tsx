@@ -4,7 +4,7 @@ import { timeAgo } from '../../core/geo';
 import { useStore } from '../store';
 import { Icon } from '../components/Icon';
 import { isNative } from '../../data/platform';
-import { locationMessage } from '../../data/location';
+import { LocationHelp } from '../components/LocationHelp';
 
 export const VISIBILITY_LABEL: Record<Visibility, { title: string; detail: string }> = {
   shared: { title: 'Shared', detail: 'Other spotters see it right away.' },
@@ -13,7 +13,7 @@ export const VISIBILITY_LABEL: Record<Visibility, { title: string; detail: strin
 };
 
 export function Settings({ onBack }: { onBack: () => void }) {
-  const { settings, updateSettings, setUsername, snaps, persisted, exportData, importData, resetAll, toast, geo, requestLocation, account } = useStore();
+  const { settings, updateSettings, setUsername, snaps, persisted, exportData, importData, resetAll, toast, geo, account } = useStore();
   const [name, setName] = useState(settings.username);
   const [armed, setArmed] = useState(false);
   const [usage, setUsage] = useState<string | null>(null);
@@ -34,12 +34,12 @@ export function Settings({ onBack }: { onBack: () => void }) {
   return (
     <section className="view" aria-label="Settings">
       <div className="form-head">
-        <div><p className="eyebrow">Catdex</p><h1>Settings</h1></div>
+        <div><p className="eyebrow">You</p><h1>Account &amp; settings</h1></div>
         <button className="pill-btn" onClick={onBack}><Icon name="back" />Back</button>
       </div>
 
       <div className="settings">
-        <AccountPanel />
+        <div id="account"><AccountPanel /></div>
 
         <div className="set-group">
           <p className="set-title"><Icon name="shield" /> Privacy</p>
@@ -80,11 +80,9 @@ export function Settings({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="set-group">
-          <div className="set-row">
-            <span><strong>Location</strong><span className={`muted small ${geo.status === 'off' || geo.status === 'denied' ? 'warn' : ''}`}>
-              {locationMessage(geo.status, geo.accuracy, !!geo.point)}
-            </span></span>
-            {geo.status !== 'live' && <button className="pill-btn" onClick={requestLocation}>Retry</button>}
+          <div className="set-row column">
+            <span><strong>Location</strong>{geo.source && <span className="muted small">Last fix from {geo.source === 'fused' ? 'Google location' : geo.source === 'gps' ? 'satellite GPS' : geo.source === 'network' ? 'Wi-Fi / mobile network' : geo.source}{geo.updatedAt ? `, ${timeAgo(geo.updatedAt)}` : ''}</span>}</span>
+            <LocationHelp compact />
           </div>
           <div className="set-row">
             <span><strong>On this phone</strong><span className="muted small">

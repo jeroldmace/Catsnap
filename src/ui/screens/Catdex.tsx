@@ -1,4 +1,5 @@
 import { rankFor } from '../../core/rules';
+import { timeAgo } from '../../core/geo';
 import { useStore } from '../store';
 import { CatArt } from '../components/CatArt';
 import { RarityBadge } from '../components/bits';
@@ -7,7 +8,7 @@ import { Icon, Paw } from '../components/Icon';
 interface Props { onOpen: (id: string) => void; onPlus: () => void; onSettings: () => void; onSnap: () => void }
 
 export function Catdex({ onOpen, onPlus, onSettings, onSnap }: Props) {
-  const { snaps, points, settings } = useStore();
+  const { snaps, points, settings, account, sync } = useStore();
   const mine = snaps.filter((s) => s.source === 'mine').sort((a, b) => b.createdAt - a.createdAt);
   const habitats = new Set(mine.map((s) => s.habitat));
   const logged = snaps.reduce((a, s) => a + s.mySightings.length, 0);
@@ -29,8 +30,18 @@ export function Catdex({ onOpen, onPlus, onSettings, onSnap }: Props) {
           <h1>@{settings.username}</h1>
           <p className="muted">{rankFor(points)}{settings.plus ? ' · Plus member' : ''}</p>
         </div>
-        <button className="icon-btn" aria-label="Settings" onClick={onSettings}><Icon name="gear" /></button>
+
       </div>
+      <button className={`account-card ${account ? '' : 'cta'}`} onClick={onSettings}>
+        <span className="account-card-icon"><Icon name={account ? 'globe' : 'shield'} /></span>
+        <span className="grow">
+          <strong>{account ? 'Account & settings' : 'Sign in or create an account'}</strong>
+          <span className="muted small">{account
+            ? `${account.email ?? ''}${sync.lastSync ? ` · synced ${timeAgo(sync.lastSync)}` : ''}${sync.pending ? ` · ${sync.pending} waiting` : ''}`
+            : 'Back up your snaps and see cats shared by other spotters. Also: privacy, backup, location.'}</span>
+        </span>
+        <Icon name="back" className="chev" />
+      </button>
       <div className="stats">
         <div><strong>{mine.length}</strong><span>Snaps</span></div>
         <div><strong>{logged}</strong><span>Sightings</span></div>
