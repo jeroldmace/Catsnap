@@ -71,10 +71,15 @@ export function Settings({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="set-group">
-          <label className="set-row" htmlFor="username">
-            <span><strong>Username</strong><span className="muted small">{account ? 'Shown to other spotters.' : 'Shown on your snaps.'}</span></span>
-            <input id="username" value={name} onChange={(e) => setName(e.target.value)} onBlur={saveName} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
-          </label>
+          <div className="set-row column">
+            <span><strong>Username</strong><span className="muted small">{account ? 'Shown to other spotters. Never use your password or email here.' : 'Shown on your snaps.'}</span></span>
+            <div className="name-edit">
+              <input id="displayName" name="cat-snap-display-name" autoComplete="off" autoCorrect="off" autoCapitalize="none" spellCheck={false}
+                data-lpignore="true" data-1p-ignore="true" data-form-type="other"
+                value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); saveName(); } }} />
+              <button className="pill-btn dark" disabled={name.trim().toLowerCase() === settings.username} onClick={saveName}>Save</button>
+            </div>
+          </div>
           <label className="set-row">
             <span><strong>Show the example cat</strong><span className="muted small">Not-Claude, the built-in starter cat. Never uploaded.</span></span>
             <input type="checkbox" className="switch" checked={settings.showExample} onChange={(e) => updateSettings({ showExample: e.target.checked })} />
@@ -135,11 +140,12 @@ export function Settings({ onBack }: { onBack: () => void }) {
 }
 
 function AccountPanel() {
-  const { account, sync, syncNow, signUp, signIn, signOut, deleteAccount, toast, settings } = useStore();
+  const { account, sync, syncNow, signUp, signIn, signOut, deleteAccount, toast, settings, changePassword } = useStore();
+  const [newPw, setNewPw] = useState('');
+  const [newPw2, setNewPw2] = useState('');
   const [mode, setMode] = useState<'in' | 'up'>('up');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [username, setUsernameField] = useState(settings.username === 'you' ? '' : settings.username);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [armed, setArmed] = useState(false);
@@ -160,6 +166,20 @@ function AccountPanel() {
           <span><strong>Cloud sync</strong><span className={`muted small ${sync.state === 'error' ? 'warn' : ''}`}>{status}</span></span>
           <button className="pill-btn" disabled={sync.state === 'syncing'} onClick={syncNow}>Sync now</button>
         </div>
+        <form className="set-row column" onSubmit={async (e) => {
+          e.preventDefault();
+          if (newPw.length < 10) { toast('Use a password of at least 10 characters.'); return; }
+          if (newPw !== newPw2) { toast("The two passwords don't match."); return; }
+          if (newPw.toLowerCase() === settings.username) { toast("Don't use your username as your password."); return; }
+          try { await changePassword(newPw); setNewPw(''); setNewPw2(''); toast('Password changed'); }
+          catch (err) { toast(err instanceof Error ? err.message : "Couldn't change the password."); }
+        }}>
+          <span><strong>Change password</strong></span>
+          <input type="email" autoComplete="username" value={account.email ?? ''} readOnly hidden />
+          <input id="newPassword" type="password" autoComplete="new-password" minLength={10} placeholder="New password (10+ characters)" value={newPw} onChange={(e) => setNewPw(e.target.value)} />
+          <input id="newPassword2" type="password" autoComplete="new-password" minLength={10} placeholder="Repeat new password" value={newPw2} onChange={(e) => setNewPw2(e.target.value)} />
+          <button type="submit" className="pill-btn dark" style={{ justifySelf: 'start' }} disabled={!newPw || !newPw2}>Change password</button>
+        </form>
         <div className="set-row column">
           <button className={`ghost-btn left ${armed ? 'armed' : ''}`} disabled={busy} onClick={async () => {
             if (!armed) { setArmed(true); window.setTimeout(() => setArmed(false), 5000); return; }
@@ -180,9 +200,7 @@ function AccountPanel() {
     setBusy(true);
     try {
       if (mode === 'up') {
-        const clean = username.trim().toLowerCase();
-        if (clean && !/^[a-z0-9_.-]{2,24}$/.test(clean)) { toast('Usernames are 2–24 lowercase letters, numbers, dots, dashes or underscores.'); return; }
-        const r = await signUp(email.trim(), password, clean);
+        const r = await signUp(email.trim(), password);
         if (r === 'confirm-email') {
           setNotice(`Check ${email.trim()} for a confirmation email and tap the link. The page it opens may look broken; that's fine. Then come back and sign in.`);
           setMode('in');
@@ -210,10 +228,9 @@ function AccountPanel() {
         <input id="authEmail" type="email" autoComplete="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
         <input id="authPassword" type="password" autoComplete={mode === 'up' ? 'new-password' : 'current-password'} required minLength={10}
           placeholder={mode === 'up' ? 'Password (10+ characters)' : 'Password'} value={password} onChange={(e) => setPassword(e.target.value)} />
-        {mode === 'up' && <input id="authUsername" placeholder="Username (optional)" value={username} onChange={(e) => setUsernameField(e.target.value)} />}
         <button type="submit" className="primary-btn" disabled={busy}>{busy ? 'Please wait…' : mode === 'up' ? 'Create account' : 'Sign in'}</button>
       </form>
-      <p className="muted small">Your email is only used to sign in. It's never shown to other spotters.</p>
+      <p className="muted small">Your email is only used to sign in and is never shown to other spotters. You'll get a random username, which you can change after signing in.</p>
     </div>
   );
 }

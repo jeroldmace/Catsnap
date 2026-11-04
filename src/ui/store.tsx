@@ -57,7 +57,8 @@ interface Ctx {
   account: Account | null;
   sync: SyncStatus;
   syncNow: () => Promise<void>;
-  signUp: (email: string, password: string, username: string) => Promise<'signed-in' | 'confirm-email'>;
+  signUp: (email: string, password: string) => Promise<'signed-in' | 'confirm-email'>;
+  changePassword: (password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -311,10 +312,16 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
   const points = useMemo(() => pointsFor(mine, interactions, settings.username), [mine, interactions, settings.username]);
 
   // ---- Account actions ----
-  const signUp = useCallback(async (email: string, password: string, username: string) => {
-    const { data, error } = await cloud().auth.signUp({ email, password, options: { data: { username } } });
+  // No username or other metadata is sent at sign-up: the server assigns a
+  // neutral random username, which the user can change later in Settings.
+  const signUp = useCallback(async (email: string, password: string) => {
+    const { data, error } = await cloud().auth.signUp({ email, password });
     if (error) throw new Error(error.message);
     return data.session ? 'signed-in' : 'confirm-email';
+  }, []);
+  const changePassword = useCallback(async (password: string) => {
+    const { error } = await cloud().auth.updateUser({ password });
+    if (error) throw new Error(/reauth|recent/i.test(error.message) ? 'For security, sign out and back in, then change your password.' : error.message);
   }, []);
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await cloud().auth.signInWithPassword({ email, password });
@@ -463,7 +470,7 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
 
   const value: Ctx = {
     ready, settings, geo, here, radarCenter, travel, setTravel, snaps, points, persisted, toast, toastMsg,
-    account, sync, syncNow, getBestFix: () => bestFix(recentFixes.current), signUp, signIn, signOut, deleteAccount,
+    account, sync, syncNow, getBestFix: () => bestFix(recentFixes.current), signUp, changePassword, signIn, signOut, deleteAccount,
     updateSettings, setUsername, addSnap, editSnap, deleteSnap, toggleLike, addComment, logSighting, exportData, importData, resetAll,
     requestLocation: startWatch,
   };

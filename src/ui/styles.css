@@ -578,3 +578,7 @@ input, select, textarea { font: inherit; color: var(--ink); width: 100%; border:
 .cropper-row .seg button.active { background: #fff; color: var(--ink); }
 .cropper-row .pill-btn { background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.2); }
 .edit-chip { color: var(--accent-deep); }
+
+.name-edit { display: flex; gap: 8px; }
+.name-edit input { flex: 1; min-width: 0; }
+form.set-row.column { gap: 8px; }
