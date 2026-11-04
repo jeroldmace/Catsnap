@@ -555,3 +555,5 @@ input, select, textarea { font: inherit; color: var(--ink); width: 100%; border:
 .map-picker-foot { display: grid; gap: 6px; }
 .map-picker-foot p { margin: 0; text-align: center; }
 .diag { font-family: var(--f-mono); font-size: .7rem; color: var(--muted); background: var(--sunk); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; word-break: break-word; margin: 6px 0 0; }
+
+.sats { display: block; margin-top: 4px; font-weight: 700; color: var(--ink); }

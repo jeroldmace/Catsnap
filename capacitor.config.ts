@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   server: { androidScheme: 'https' },
   android: {
     // Identify the app to OpenStreetMap's tile servers (their usage policy asks for this).
-    appendUserAgent: 'CatSnap/0.7.1 (field test)',
+    appendUserAgent: 'CatSnap/0.7.2 (field test)',
     // MainActivity handles system bar and keyboard insets itself.
     adjustMarginsForEdgeToEdge: 'disable',
   },

@@ -11,7 +11,6 @@ export function exampleSnap(here: GeoPoint, photoBase: string, firstRun: number)
   return {
     id: EXAMPLE_ID,
     source: 'example',
-    featured: true,
     name: 'Not-Claude',
     coat: 'orange',
     eyes: 'amber',

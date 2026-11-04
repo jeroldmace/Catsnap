@@ -3,10 +3,12 @@ package app.catsnap.fieldtest;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.location.GnssStatus;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
 import android.provider.Settings;
@@ -42,6 +44,36 @@ public class CatLocationPlugin extends Plugin {
     private final Map<String, LocationListener> listeners = new HashMap<>();
     private final Map<String, PluginCall> watches = new HashMap<>();
 
+    // Satellite status, so the app can show "8 seen, 0 locked" while GPS acquires.
+    private int satellitesInView = 0;
+    private int satellitesUsed = 0;
+    private long gnssAt = 0;
+    private Object gnssCallback = null;
+
+    private void startGnss() {
+        if (gnssCallback != null || Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return;
+        try {
+            GnssStatus.Callback cb = new GnssStatus.Callback() {
+                @Override public void onSatelliteStatusChanged(@NonNull GnssStatus status) {
+                    int used = 0;
+                    for (int i = 0; i < status.getSatelliteCount(); i++) if (status.usedInFix(i)) used++;
+                    satellitesInView = status.getSatelliteCount();
+                    satellitesUsed = used;
+                    gnssAt = System.currentTimeMillis();
+                }
+            };
+            lm.registerGnssStatusCallback(cb, new android.os.Handler(Looper.getMainLooper()));
+            gnssCallback = cb;
+        } catch (SecurityException | IllegalArgumentException ignored) { }
+    }
+
+    private void stopGnss() {
+        if (gnssCallback != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try { lm.unregisterGnssStatusCallback((GnssStatus.Callback) gnssCallback); } catch (Exception ignored) { }
+        }
+        gnssCallback = null;
+    }
+
     @Override
     public void load() {
         lm = (LocationManager) getContext().getSystemService(Context.LOCATION_SERVICE);
@@ -62,6 +94,9 @@ public class CatLocationPlugin extends Plugin {
         r.put("enabled", locationOn());
         r.put("gps", providerOn(LocationManager.GPS_PROVIDER));
         r.put("network", providerOn(LocationManager.NETWORK_PROVIDER));
+        r.put("satellites", satellitesInView);
+        r.put("satellitesUsed", satellitesUsed);
+        r.put("gnssAgeMs", gnssAt == 0 ? -1 : System.currentTimeMillis() - gnssAt);
         return r;
     }
 
@@ -138,6 +173,7 @@ public class CatLocationPlugin extends Plugin {
         }
         listeners.put(id, listener);
         watches.put(id, call);
+        startGnss();
     }
 
     @PluginMethod
@@ -152,6 +188,7 @@ public class CatLocationPlugin extends Plugin {
         if (l != null) lm.removeUpdates(l);
         PluginCall c = watches.remove(id);
         if (c != null) bridge.releaseCall(c);
+        if (listeners.isEmpty()) stopGnss();
     }
 
     @PluginMethod

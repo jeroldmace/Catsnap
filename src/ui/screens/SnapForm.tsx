@@ -9,6 +9,7 @@ import { POST_FRESH_MS, useStore, type SnapDraft } from '../store';
 import { Icon, Paw } from '../components/Icon';
 import { LocationHelp } from '../components/LocationHelp';
 import { MapPicker } from '../components/MapPicker';
+import { isNative } from '../../data/platform';
 
 interface Props { editId: string | null; onDone: (id: string) => void; onCancelEdit: () => void }
 
@@ -64,11 +65,27 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
   const sketch = useMemo(() => catSVG({ coat: d.coat, eyes: d.eyes, bg: HABITATS[d.habitat].bg }), [d.coat, d.eyes, d.habitat]);
   const forecast = rarityOf(d, editing ? editing.sightingCount : 1);
 
-  const pick = (f: File | undefined) => {
+  const pick = (f: Blob | undefined) => {
     if (!f) return;
-    if (!f.type.startsWith('image/')) { toast('Pick a photo (JPEG, PNG or HEIC).'); return; }
+    if (f.type && !f.type.startsWith('image/')) { toast('Pick a photo (JPEG, PNG or HEIC).'); return; }
     setPhoto(f);
     setPreview(URL.createObjectURL(f));
+  };
+
+  // In the Android app, open the camera app directly (a plain file input can
+  // fall back to the gallery on newer Android versions).
+  const takePhoto = async () => {
+    if (!isNative()) { fileRef.current?.click(); return; }
+    try {
+      const { Camera, CameraResultType, CameraSource } = await import('@capacitor/camera');
+      const shot = await Camera.getPhoto({ source: CameraSource.Camera, resultType: CameraResultType.Uri, quality: 90, correctOrientation: true, saveToGallery: false });
+      if (!shot.webPath) return;
+      pick(await (await fetch(shot.webPath)).blob());
+    } catch (err) {
+      const m = String((err as Error)?.message ?? err);
+      if (/cancel/i.test(m)) return;
+      toast(/denied|permission/i.test(m) ? 'Camera permission is off. Allow it in phone Settings → Apps → Cat Snap → Permissions.' : "Couldn't open the camera. Try \"From library\".");
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -126,7 +143,7 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
           {preview ? <img src={preview} alt="Your photo" /> : <div className="sketch" dangerouslySetInnerHTML={{ __html: sketch }} />}
           {!preview && <span className="muted small">No photo? We'll use this sketch, drawn from the coat and eyes you pick.</span>}
           <div className="photo-actions">
-            <button type="button" className="pill-btn dark" onClick={() => fileRef.current?.click()}><Icon name="camera" />{preview ? 'Retake' : 'Take photo'}</button>
+            <button type="button" className="pill-btn dark" onClick={takePhoto}><Icon name="camera" />{preview ? 'Retake' : 'Take photo'}</button>
             <button type="button" className="pill-btn" onClick={() => document.getElementById('libraryInput')?.click()}><Icon name="image" />From library</button>
             {preview && <button type="button" className="pill-btn" onClick={() => { setPhoto(null); setPreview(null); }}><Icon name="trash" />Remove</button>}
           </div>

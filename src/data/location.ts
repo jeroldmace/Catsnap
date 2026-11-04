@@ -11,7 +11,7 @@ export const STALE_MS = 2 * 60 * 1000;
 
 // Native module (android/.../CatLocationPlugin.java): Android's own GPS + network
 // location, independent of Google Play services.
-interface CatStatus { permission: string; enabled: boolean; gps: boolean; network: boolean }
+interface CatStatus { permission: string; enabled: boolean; gps: boolean; network: boolean; satellites?: number; satellitesUsed?: number; gnssAgeMs?: number }
 interface CatFix { lat?: number; lng?: number; accuracy?: number; time?: number; provider?: string; cached?: boolean; off?: boolean; searching?: boolean }
 interface CatLocationPlugin {
   status(): Promise<CatStatus>;
@@ -131,6 +131,7 @@ export async function locationDiagnostics(): Promise<string> {
     try {
       const st = await CatLocation.status();
       lines.push(`permission: ${st.permission}; location on: ${st.enabled}; gps provider: ${st.gps}; network provider: ${st.network}`);
+      lines.push(`satellites: ${st.satellites ?? '-'} in view, ${st.satellitesUsed ?? '-'} used in fix${st.gnssAgeMs != null && st.gnssAgeMs >= 0 ? ` (updated ${Math.round(st.gnssAgeMs / 1000)}s ago)` : ' (no satellite data yet)'}`);
     } catch (e) { lines.push(`status error: ${String((e as Error)?.message ?? e).slice(0, 120)}`); }
   }
   const secs = diag.started ? Math.round((Date.now() - diag.started) / 1000) : 0;
@@ -138,4 +139,14 @@ export async function locationDiagnostics(): Promise<string> {
   lines.push(`listening for ${secs}s; fixes: ${fixes}; last status: ${diag.lastStatus || '-'}`);
   if (diag.lastError) lines.push(`last error (${Math.round((Date.now() - diag.lastErrorAt) / 1000)}s ago): ${diag.lastError}`);
   return lines.join('\n');
+}
+
+/** Satellites seen / used right now (Android app only), or null. */
+export async function satelliteStatus(): Promise<{ inView: number; used: number } | null> {
+  if (!isNative()) return null;
+  try {
+    const st = await CatLocation.status();
+    if (st.gnssAgeMs == null || st.gnssAgeMs < 0 || st.gnssAgeMs > 30000) return null;
+    return { inView: st.satellites ?? 0, used: st.satellitesUsed ?? 0 };
+  } catch { return null; }
 }
