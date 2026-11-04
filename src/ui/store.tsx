@@ -10,6 +10,7 @@ import {
   signPhotoUrls, updateUsername, type Tombstone,
 } from '../data/cloud';
 import { isNative, saveFile } from '../data/platform';
+import { checkForUpdate } from '../data/appUpdate';
 import { disableBackgroundNotifications, enableBackgroundNotifications, fetchServerActivity, markNotifySeen, markServerActivityRead, saveNotifyPosition, type ActivityItem } from '../data/notify';
 import { startLocation, type LocStatus } from '../data/location';
 import { createIdbRepository, requestPersistentStorage } from '../data/idbRepository';
@@ -79,6 +80,8 @@ interface Ctx {
   requestLocation: () => void;
   activity: ActivityItem[];
   unread: number;
+  /** A newer app version that can be installed, if any. */
+  updateAvailable: string | null;
   markActivityRead: () => Promise<void>;
   setNotifications: (patch: Partial<Settings['notify']>) => Promise<boolean>;
 }
@@ -118,6 +121,16 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
   const [sync, setSync] = useState<SyncStatus>({ state: 'signed-out', lastSync: null, pending: 0 });
   const [serverActivity, setServerActivity] = useState<ActivityItem[]>([]);
   const [nearbyActivity, setNearbyActivity] = useState<ActivityItem[]>([]);
+  const [updateAvailable, setUpdateAvailable] = useState<string | null>(null);
+
+  // Check for a newer app version on launch and whenever the app comes back.
+  useEffect(() => {
+    const check = () => { checkForUpdate().then(setUpdateAvailable); };
+    check();
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
   const toastTimer = useRef<number>();
 
   // Latest values for async sync code (avoids stale closures).
@@ -551,7 +564,7 @@ export function StoreProvider({ children, repo: injected }: { children: ReactNod
     account, sync, syncNow, getBestFix: () => bestFix(recentFixes.current), signUp, changePassword, signIn, signOut, deleteAccount,
     updateSettings, setUsername, addSnap, editSnap, deleteSnap, toggleLike, addComment, logSighting, exportData, importData, resetAll,
     requestLocation: startWatch,
-    activity, unread, markActivityRead, setNotifications,
+    activity, unread, markActivityRead, setNotifications, updateAvailable,
   };
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

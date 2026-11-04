@@ -601,3 +601,9 @@ form.set-row.column { gap: 8px; }
 .notify-cta { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1.5px solid var(--accent); border-radius: var(--radius); padding: 12px; margin-top: 12px; }
 .notify-cta > span { flex: 1; display: grid; gap: 2px; }
 .notify-cta > .i { color: var(--accent-deep); flex: none; }
+
+.update-banner { display: flex; align-items: center; gap: 12px; margin-top: 14px; background: var(--ink); color: var(--paper); border-radius: var(--radius); padding: 12px 14px; }
+.update-banner > span { flex: 1; display: grid; gap: 2px; }
+.update-banner .muted { color: color-mix(in srgb, var(--paper) 70%, transparent); }
+.update-banner .pill-btn.dark { background: var(--accent); border-color: var(--accent); color: #fff; }
+.update-banner > .i { color: var(--gold); flex: none; }

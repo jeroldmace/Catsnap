@@ -95,3 +95,14 @@ describe('best fix', () => {
     expect(bestFix([], now)).toBeNull();
   });
 });
+
+import { compareVersions } from '../src/core/version';
+
+describe('versions', () => {
+  it('compares dotted versions numerically', () => {
+    expect(compareVersions('0.9.1', '0.9.0')).toBeGreaterThan(0);
+    expect(compareVersions('0.10.0', '0.9.9')).toBeGreaterThan(0);
+    expect(compareVersions('1.0', '1.0.0')).toBe(0);
+    expect(compareVersions('0.8.2', '0.9.0')).toBeLessThan(0);
+  });
+});

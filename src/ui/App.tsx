@@ -10,6 +10,7 @@ import { Plus } from './screens/Plus';
 import { Radar, type RadarFilters } from './screens/Radar';
 import { Settings } from './screens/Settings';
 import { Activity } from './screens/Activity';
+import { UpdateBanner } from './components/UpdateBanner';
 import { SnapForm } from './screens/SnapForm';
 
 type View = 'feed' | 'radar' | 'snap' | 'dex' | 'plus' | 'settings' | 'activity';
@@ -90,6 +91,7 @@ export function App() {
       </header>
 
       <main className="views">
+        {(view === 'feed' || view === 'settings') && <UpdateBanner />}
         {view === 'feed' && <Feed onOpen={setOpenId} onPlus={openPlus} onSnap={() => go('snap')} onEdit={(id) => { setOpenId(null); setEditId(id); if (location.hash !== '#snap') location.hash = 'snap'; else setView('snap'); }} />}
         {view === 'radar' && <Radar filters={filters} setFilters={setFilters} onOpen={setOpenId} onPlus={openPlus} />}
         {view === 'snap' && <SnapForm editId={editId} onDone={(id) => { setEditId(null); go('feed'); setTimeout(() => setOpenId(id), 50); }} onCancelEdit={() => { const id = editId; setEditId(null); go('dex'); if (id) setTimeout(() => setOpenId(id), 50); }} />}

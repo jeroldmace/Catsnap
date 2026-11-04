@@ -7,15 +7,13 @@ The Android app is the same web app wrapped with [Capacitor](https://capacitorjs
 2. Open it. If Android asks, allow **Install unknown apps** for your browser or file manager.
 3. Open **Cat Snap**. Allow **location** (for the radar and snap pins) and **camera** when asked.
 
-## Updating to a newer APK
-Each field-test APK is signed with a new key, so Android won't install it over the old one. To update without losing anything:
-1. In the old app: **Catdex → Settings → Save backup**, and save the file somewhere outside the app (Drive, Files, email).
-2. Uninstall Cat Snap. This deletes the snaps stored inside the app, which is why step 1 matters.
-3. Install the new APK and open it.
-4. **Catdex → Settings → Restore backup** and pick the file from step 1. Your snaps, photos, likes, comments and settings come back.
+## Updating
+From 0.9.1 every release is signed with the same permanent key, so new versions install **over** the old one and keep your data.
+- In the app: when a newer version is published, a **"Cat Snap x.y.z is ready"** banner appears on the feed and in Account & settings. Tap **Update**, open the download, and tap **Update** in Android's installer.
+- Or open your invite link again and install over the top.
+- Coming from 0.9.0 or older (signed with throwaway keys): uninstall once, then install 0.9.1. Snaps synced to your account come back after signing in.
 
-## Location on Android
-The app uses its own small native module (`CatLocationPlugin.java`) that reads Android's satellite GPS and Wi-Fi/mobile-network positions directly. It doesn't depend on Google Play services, so it also works where Google's location service doesn't (for example in mainland China). Google's fused location runs alongside when available, and the first good fix wins. If no fix arrives, you can set the spot on a map when posting.
+Release key fingerprint (SHA-256): `3F:98:9E:34:A6:11:E3:15:6C:47:4B:FB:3B:AF:30:E9:1F:02:63:F0:DC:8C:EF:34:A0:33:66:A6:A2:00:F6:6A`
 
 ## Differences from the web version
 - **Save backup** opens Android's share sheet, so you can save the file to Drive or Files or email it.
@@ -30,5 +28,7 @@ npm run android:apk   # builds the web app, syncs it into android/, builds and c
 ```
 
 ## Signing
-Field-test APKs aren't signed with a kept key; each build gets a fresh one (see *Updating* above).
-If you later want updates to install in place, create a private key, keep it out of git, and point a git-ignored `android/keystore.properties` at it (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). `android/app/build.gradle` picks it up automatically. Use a separate private upload key for the Play Store.
+- The permanent release key is stored in a private Supabase bucket (`build-secrets`), served only by the `build-key` function to a caller presenting `CATSNAP_BUILD_SECRET`.
+- The owner sets that passphrase in two places: Supabase → Edge Functions → Secrets (`CATSNAP_BUILD_SECRET`), and this cloud environment's settings (environment variable `CATSNAP_BUILD_SECRET`).
+- A build session runs `scripts/fetch-signing-key.sh`, which writes the git-ignored `android/keystore.properties`. Release builds refuse to run without it, so a wrongly signed APK can't be published by accident.
+- Never commit the keystore or its passwords.

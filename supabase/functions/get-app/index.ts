@@ -12,12 +12,35 @@ function adminKey(): string {
   return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 }
 
+const json = (b: unknown, status = 200) =>
+  new Response(JSON.stringify(b), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, apikey, content-type' } });
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return json({});
   if (req.method !== 'GET') return text('Method not allowed', 405);
-  const code = (new URL(req.url).searchParams.get('code') ?? '').toLowerCase();
+  const params = new URL(req.url).searchParams;
+  const admin = createClient(Deno.env.get('SUPABASE_URL')!, adminKey(), { auth: { persistSession: false, autoRefreshToken: false } });
+
+  // ?info=1 -> latest version number, for the app's "update available" check.
+  if (params.get('info')) {
+    const { data } = await admin.storage.from('app-releases').download('latest.json');
+    if (!data) return json({ version: null });
+    try { const m = JSON.parse(await data.text()); return json({ version: m.version, size: m.size }); } catch { return json({ version: null }); }
+  }
+
+  // Signed-in app users can update without an invite code: ?json=1 with their access token.
+  const bearer = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  if (params.get('json') && bearer) {
+    const { data: u } = await admin.auth.getUser(bearer);
+    if (!u?.user) return json({ error: 'Not signed in' }, 401);
+    const { data: signed } = await admin.storage.from('app-releases').createSignedUrl('catsnap-latest.apk', 600, { download: 'catsnap.apk' });
+    if (!signed) return json({ error: 'Not available' }, 503);
+    return json({ url: signed.signedUrl });
+  }
+
+  const code = (params.get('code') ?? '').toLowerCase();
   if (!/^[a-z0-9]{8,32}$/.test(code)) return text('This download link is missing its invite code. Ask the person who invited you for a new link.', 403);
 
-  const admin = createClient(Deno.env.get('SUPABASE_URL')!, adminKey(), { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: inv } = await admin.from('app_invites').select('code, revoked, expires_at, max_uses, uses').eq('code', code).maybeSingle();
   const now = new Date();
   if (!inv || inv.revoked || (inv.expires_at && new Date(inv.expires_at) < now) || (inv.max_uses != null && inv.uses >= inv.max_uses)) {
