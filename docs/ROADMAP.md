@@ -6,7 +6,8 @@ An installable web app with on-device storage. Core rules (`src/core`) and stora
 ## Steps to 1.0
 
 1. **Field-test fixes (v0.6)**: act on notes from real outings. Tune the rarity rules and the blur radius.
-2. **Accounts and a shared radar (v0.7)**
+2. **Accounts and a shared radar (v0.6, done)**: Supabase sign-in, offline-first sync, opt-in privacy (see PRIVACY.md). Next: PostGIS radius queries once there are many snaps, and realtime updates.
+2b. *(original plan)*
    - Add a `supabaseRepository.ts` implementing `Repository`. It uses Postgres + PostGIS for "cats within X km", Storage for photos, and Auth for sign-in.
    - Write row-level security rules: everyone reads public snaps, only the owner edits theirs.
    - Store only blurred points. Add a delay or coarser rounding for brand-new snaps. Keep sensitive spots (colonies, TNR sites) off the radar.

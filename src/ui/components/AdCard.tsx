@@ -1,4 +1,4 @@
-import { ADS } from '../../core/demo';
+import { ADS } from '../../core/example';
 import { Icon } from './Icon';
 
 /** Mock sponsored card shown to Free users. */

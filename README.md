@@ -2,7 +2,9 @@
 
 A field log for **cats you meet out in the world**: strays, trail cats, harbour cats, temple and museum residents, market mousers. You can snap them, rate them and track them on the Cat Radar. Pets at home are deliberately out of scope.
 
-This is the **field-test build (v0.5)**. It's an installable web app (PWA) that runs on your phone with real GPS, the real camera and a street map. It keeps all data on the phone. It's laid out so the same core can grow into a 1.0 with shared accounts and a native app (see [docs/ROADMAP.md](docs/ROADMAP.md)).
+This is the **field-test build (v0.6)**. Sign in to sync snaps to the cloud (Supabase) and see cats shared by other spotters. Without an account, everything stays on the phone. See [docs/PRIVACY.md](docs/PRIVACY.md) for how sharing and privacy work.
+
+Earlier field-test builds were offline-only. It's an installable web app (PWA) that runs on your phone with real GPS, the real camera and a street map. It keeps all data on the phone. It's laid out so the same core can grow into a 1.0 with shared accounts and a native app (see [docs/ROADMAP.md](docs/ROADMAP.md)).
 
 ## Get it on your phone
 
@@ -51,8 +53,8 @@ npm run build      # type-check + production build into dist/
 ```
 src/core/   Pure TypeScript: types, catalog, rarity and points rules, geo, demo content, cat sketches.
             No browser APIs, so it can be reused by a native app or a server.
-src/data/   Repository interface + IndexedDB implementation, photo processing, backup/restore.
-            Swap in a Supabase repository later without touching the UI.
+src/data/   IndexedDB storage, cloud sync (cloud.ts), location, photo processing, backup/restore.
+supabase/   Database migrations and the delete-account edge function.
 src/ui/     React screens and components, app state (store.tsx), styles.
 tests/      Vitest unit tests.
 android/    Capacitor Android project (wraps the web app into an APK).

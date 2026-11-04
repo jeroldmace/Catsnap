@@ -32,9 +32,13 @@ export function pointsFor(snaps: Snap[], interactions: Record<string, Interactio
   return ownPts + logged * 5;
 }
 
+/**
+ * All sightings of a cat: the original snap, other people's sightings
+ * (crowd.sightings counts the original too when it isn't yours) and yours.
+ */
 export function totalSightings(s: Snap, ix?: Interaction): number {
-  const base = s.source === 'mine' ? 1 : Math.max(1, s.crowd.sightings);
-  return base + (ix?.sightings.length ?? 0);
+  const original = s.source === 'mine' ? 1 : 0;
+  return Math.max(1, original + s.crowd.sightings + (ix?.sightings.length ?? 0));
 }
 
 export function rankFor(points: number): string {

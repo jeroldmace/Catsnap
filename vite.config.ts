@@ -3,6 +3,24 @@ import react from '@vitejs/plugin-react';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { VitePWA } from 'vite-plugin-pwa';
 import pkg from './package.json';
+import { SUPABASE_URL } from './src/config';
+
+// Content Security Policy for the web build: the app may only talk to itself,
+// the Cat Snap Supabase project and OpenStreetMap tiles. (The Android build
+// uses --mode native and skips this, because Capacitor injects its own script.)
+const csp = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self' data:",
+  `img-src 'self' data: blob: https://tile.openstreetmap.org ${SUPABASE_URL}`,
+  `connect-src 'self' ${SUPABASE_URL} ${SUPABASE_URL.replace('https://', 'wss://')}`,
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
+].join('; ');
 
 // BASE_PATH lets the same build serve from a sub-folder (GitHub Pages: /catsnap/).
 const base = process.env.BASE_PATH || '/';
@@ -12,6 +30,13 @@ export default defineConfig(({ mode }) => ({
   define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   plugins: [
     react(),
+    {
+      name: 'catsnap-csp',
+      transformIndexHtml(html: string, ctx: { server?: unknown }) {
+        const inject = !ctx.server && mode !== 'native';
+        return html.replace('<!--CSP-->', inject ? `<meta http-equiv="Content-Security-Policy" content="${csp}" />` : '');
+      },
+    },
     // `npm run dev:phone` serves over HTTPS on your LAN so phone GPS and camera work.
     ...(mode === 'phone' ? [basicSsl()] : []),
     VitePWA({
@@ -35,17 +60,14 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,jpg,woff2}'],
+        // Never cache account or API traffic in the service worker.
+        navigateFallbackDenylist: [/^\/auth/, /^\/rest/],
         runtimeCaching: [
           {
             // Map tiles: keep recently viewed areas for offline use in the field.
             urlPattern: /^https:\/\/tile\.openstreetmap\.org\/.*/,
             handler: 'CacheFirst',
             options: { cacheName: 'map-tiles', expiration: { maxEntries: 800, maxAgeSeconds: 60 * 60 * 24 * 14 }, cacheableResponse: { statuses: [0, 200] } },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/,
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'fonts', expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 } },
           },
         ],
       },

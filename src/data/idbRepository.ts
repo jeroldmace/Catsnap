@@ -45,6 +45,8 @@ export function createIdbRepository(name = 'catsnap'): Repository {
     async deletePhoto(id) { await (await db()).delete('photos', id); },
     async putInteraction(ix) { await (await db()).put('interactions', ix); },
     async putSettings(settings) { await (await db()).put('meta', settings, 'settings'); },
+    async getMeta<T>(key: string) { return (await (await db()).get('meta', key)) as T | undefined; },
+    async putMeta(key, value) { await (await db()).put('meta', value, key); },
     async clearAll() {
       const d = await db();
       const tx = d.transaction(['snaps', 'photos', 'interactions', 'meta'], 'readwrite');

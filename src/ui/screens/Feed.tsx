@@ -24,7 +24,7 @@ const AD_EVERY = 5;
 interface Props { onOpen: (id: string) => void; onPlus: (feature?: string) => void; onSnap: () => void }
 
 export function Feed({ onOpen, onPlus, onSnap }: Props) {
-  const { snaps, toggleLike, settings, toast } = useStore();
+  const { snaps, toggleLike, settings, toast, account } = useStore();
   const [sort, setSort] = useState<Sort>('recent');
   const [habitat, setHabitat] = useState<HabitatKey | null>(null);
   const featured = snaps.find((s) => s.featured);
@@ -77,7 +77,7 @@ export function Feed({ onOpen, onPlus, onSnap }: Props) {
       </div>
 
       <div className="feed">
-        {list.length === 0 && <p className="empty">No cats here yet. {settings.showDemo ? 'Try another habitat.' : 'Snap one, or turn demo cats on in Settings.'}</p>}
+        {list.length === 0 && <p className="empty">No cats here yet. {account ? 'Snap one, or check back as other spotters share theirs.' : 'Snap one, or sign in (Catdex → Settings) to see cats shared by other spotters.'}</p>}
         {list.flatMap((s, i) => {
           const out = [<CatCard key={s.id} s={s} onOpen={onOpen} onLike={toggleLike} />];
           if (!settings.plus && (i + 1) % AD_EVERY === 0)

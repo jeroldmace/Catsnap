@@ -1,13 +1,13 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it } from 'vitest';
 import { createIdbRepository } from '../src/data/idbRepository';
-import { demoSnaps } from '../src/core/demo';
+import { exampleSnap } from '../src/core/example';
 import { DEFAULT_SETTINGS } from '../src/core/types';
 
 describe('IndexedDB repository', () => {
   it('saves, loads and deletes snaps, photos, interactions and settings', async () => {
     const repo = createIdbRepository('test-' + Math.random());
-    const snap = { ...demoSnaps({ lat: 0, lng: 0 }, 'you', '/')[1], id: 'a', source: 'mine' as const, photoId: 'p1' };
+    const snap = { ...exampleSnap({ lat: 0, lng: 0 }, '/', 0), id: 'a', source: 'mine' as const, photoId: 'p1' };
     await repo.putSnap(snap);
     await repo.putPhoto('p1', new Blob(['jpeg-bytes'], { type: 'image/jpeg' }));
     await repo.putInteraction({ snapId: 'a', liked: true, comments: [], sightings: [] });
@@ -24,6 +24,8 @@ describe('IndexedDB repository', () => {
     expect(all.snaps).toEqual([]);
     expect(all.interactions.a).toBeUndefined();
 
+    await repo.putMeta('k', [1, 2]);
+    expect(await repo.getMeta('k')).toEqual([1, 2]);
     await repo.clearAll();
     expect((await repo.loadAll()).settings).toBeNull();
   });

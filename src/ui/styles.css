@@ -494,3 +494,15 @@ input, select, textarea { font: inherit; color: var(--ink); width: 100%; border:
 .loc-help > span { flex: 1; min-width: 0; }
 .loc-help .pill-btn, .loc-line .pill-btn { flex: none; padding: 6px 12px; }
 .loc-line.warn, .muted.warn { color: var(--danger); }
+
+.vis-picker { display: grid; gap: 6px; }
+.vis-picker button { display: grid; gap: 1px; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-s); padding: 9px 12px; }
+.vis-picker button span { font-size: .8rem; color: var(--muted); }
+.vis-picker button.active { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.set-row.column { flex-direction: column; align-items: stretch; }
+.auth-tabs { margin: 10px 0 8px; }
+.auth-tabs button { flex: 1; }
+.auth-form { display: grid; gap: 8px; padding-bottom: 8px; }
+.notice { background: #eef7f1; border: 1px solid #bfe3cd; border-radius: var(--radius-s); padding: 10px 12px; font-size: .85rem; color: var(--ink-2); margin: 0 0 8px; }
+.ghost-btn.left { margin: 0; width: 100%; text-align: left; }
+.pill-btn:disabled { opacity: .6; }

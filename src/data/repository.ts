@@ -14,5 +14,7 @@ export interface Repository {
   deletePhoto(id: string): Promise<void>;
   putInteraction(ix: Interaction): Promise<void>;
   putSettings(settings: Settings): Promise<void>;
+  getMeta<T>(key: string): Promise<T | undefined>;
+  putMeta(key: string, value: unknown): Promise<void>;
   clearAll(): Promise<void>;
 }

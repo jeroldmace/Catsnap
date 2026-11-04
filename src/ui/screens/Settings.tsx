@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
+import type { Visibility } from '../../core/types';
+import { timeAgo } from '../../core/geo';
 import { useStore } from '../store';
 import { Icon } from '../components/Icon';
 import { isNative } from '../../data/platform';
 import { locationMessage } from '../../data/location';
 
+export const VISIBILITY_LABEL: Record<Visibility, { title: string; detail: string }> = {
+  shared: { title: 'Shared', detail: 'Other spotters see it right away.' },
+  delayed: { title: 'Shared after 1 hour', detail: "Others see it an hour later, so nobody can follow where you are now." },
+  private: { title: 'Private', detail: 'Only you. Still backed up to your account.' },
+};
+
 export function Settings({ onBack }: { onBack: () => void }) {
-  const { settings, updateSettings, snaps, persisted, exportData, importData, resetAll, toast, geo, requestLocation } = useStore();
+  const { settings, updateSettings, setUsername, snaps, persisted, exportData, importData, resetAll, toast, geo, requestLocation, account } = useStore();
   const [name, setName] = useState(settings.username);
   const [armed, setArmed] = useState(false);
   const [usage, setUsage] = useState<string | null>(null);
@@ -17,11 +25,10 @@ export function Settings({ onBack }: { onBack: () => void }) {
     navigator.storage?.estimate?.().then((e) => e.usage != null && setUsage(`${(e.usage / 1024 / 1024).toFixed(1)} MB used`)).catch(() => {});
   }, [snaps.length]);
 
-  const saveName = () => {
-    const clean = name.trim().replace(/[^\w.-]/g, '').slice(0, 24);
-    if (!clean) { setName(settings.username); return; }
-    if (clean !== settings.username) { updateSettings({ username: clean }); toast(`You're now @${clean}`); }
-    setName(clean);
+  const saveName = async () => {
+    if (name.trim().toLowerCase() === settings.username) return;
+    try { await setUsername(name); toast(`You're now @${name.trim().toLowerCase()}`); }
+    catch (e) { toast(e instanceof Error ? e.message : "Couldn't change your username."); setName(settings.username); }
   };
 
   return (
@@ -32,14 +39,39 @@ export function Settings({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="settings">
+        <AccountPanel />
+
+        <div className="set-group">
+          <p className="set-title"><Icon name="shield" /> Privacy</p>
+          <p className="muted small">Snaps are shared in real time by default. These options are yours to switch on.</p>
+          <div className="set-row column">
+            <span><strong>Default for new snaps</strong><span className="muted small">You can change it on each snap.</span></span>
+            <div className="vis-picker">
+              {(Object.keys(VISIBILITY_LABEL) as Visibility[]).map((v) => (
+                <button key={v} className={settings.defaultVisibility === v ? 'active' : ''} aria-pressed={settings.defaultVisibility === v}
+                  onClick={() => updateSettings({ defaultVisibility: v })}>
+                  <strong>{VISIBILITY_LABEL[v].title}</strong><span>{VISIBILITY_LABEL[v].detail}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="set-row">
+            <span><strong>Delay my repeat sightings</strong><span className="muted small">Others see your "saw them again" pins an hour later.</span></span>
+            <input type="checkbox" className="switch" checked={settings.delaySightings} onChange={(e) => updateSettings({ delaySightings: e.target.checked })} />
+          </label>
+          <div className="set-row column">
+            <span className="muted small">Always on, for everyone: your location is blurred about 100 m on the phone before anything is saved, and photos have their hidden GPS data removed.</span>
+          </div>
+        </div>
+
         <div className="set-group">
           <label className="set-row" htmlFor="username">
-            <span><strong>Username</strong><span className="muted small">Shown on your snaps and comments.</span></span>
+            <span><strong>Username</strong><span className="muted small">{account ? 'Shown to other spotters.' : 'Shown on your snaps.'}</span></span>
             <input id="username" value={name} onChange={(e) => setName(e.target.value)} onBlur={saveName} onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
           </label>
           <label className="set-row">
-            <span><strong>Show demo cats</strong><span className="muted small">Example cats (including Claude) placed around you. Turn off to see only your own snaps.</span></span>
-            <input type="checkbox" className="switch" checked={settings.showDemo} onChange={(e) => updateSettings({ showDemo: e.target.checked })} />
+            <span><strong>Show the example cat</strong><span className="muted small">Not-Claude, the built-in starter cat. Never uploaded.</span></span>
+            <input type="checkbox" className="switch" checked={settings.showExample} onChange={(e) => updateSettings({ showExample: e.target.checked })} />
           </label>
           <label className="set-row">
             <span><strong>Plus (mock)</strong><span className="muted small">Try the paid tier. No payment.</span></span>
@@ -55,15 +87,15 @@ export function Settings({ onBack }: { onBack: () => void }) {
             {geo.status !== 'live' && <button className="pill-btn" onClick={requestLocation}>Retry</button>}
           </div>
           <div className="set-row">
-            <span><strong>On-device storage</strong><span className="muted small">
-              {mine} snap{mine === 1 ? '' : 's'}{usage ? ` · ${usage}` : ''} · {persisted ? 'protected from automatic clean-up' : 'the browser may clear this if space runs low, so back up regularly'}
+            <span><strong>On this phone</strong><span className="muted small">
+              {mine} snap{mine === 1 ? '' : 's'}{usage ? ` · ${usage}` : ''}{account ? ' · also backed up to your account' : persisted ? '' : ' · back up regularly'}
             </span></span>
           </div>
         </div>
 
         <div className="set-group">
-          <p className="set-title"><Icon name="shield" /> Backup</p>
-          <p className="muted small">Your snaps live only on this phone. Save a backup file now and then, especially before clearing browser data or switching phones.</p>
+          <p className="set-title"><Icon name="download" /> Backup file</p>
+          <p className="muted small">A file with all your snaps and photos, for keeping your own copy or moving without an account.</p>
           <div className="set-actions">
             <button className="pill-btn dark" onClick={() => exportData().then((how) => toast(how === 'shared' ? 'Backup ready. Pick where to save it.' : 'Backup saved to your downloads')).catch(() => toast('Backup failed. Try again.'))}><Icon name="download" />Save backup</button>
             <button className="pill-btn" onClick={() => fileRef.current?.click()}><Icon name="upload" />Restore backup</button>
@@ -79,8 +111,8 @@ export function Settings({ onBack }: { onBack: () => void }) {
           <p className="set-title">Field-testing tips</p>
           <ul className="tips">
             {!isNative() && <li>Add Cat Snap to your home screen so it opens full screen and works offline.</li>}
-            <li>Open the Radar once on Wi-Fi in a new area. Map tiles you've viewed are kept for offline use.</li>
-            <li>Use "Saw them again" on a cat you've already snapped instead of making a duplicate.</li>
+            <li>No signal? Snap anyway. Everything saves on the phone and uploads when you're back online.</li>
+            <li>Use "Saw them again" on a cat that's already snapped instead of making a duplicate.</li>
           </ul>
         </div>
 
@@ -89,9 +121,93 @@ export function Settings({ onBack }: { onBack: () => void }) {
           setArmed(false);
           await resetAll();
           toast('All Cat Snap data on this phone was deleted');
-        }}>{armed ? 'Tap again to delete all snaps, photos and settings' : 'Delete all data on this phone'}</button>
+        }}>{armed ? 'Tap again to delete everything stored on this phone' : 'Delete all data on this phone'}</button>
         <p className="version mono">Cat Snap field test · v{__APP_VERSION__}</p>
       </div>
     </section>
+  );
+}
+
+function AccountPanel() {
+  const { account, sync, syncNow, signUp, signIn, signOut, deleteAccount, toast, settings } = useStore();
+  const [mode, setMode] = useState<'in' | 'up'>('up');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsernameField] = useState(settings.username === 'you' ? '' : settings.username);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [armed, setArmed] = useState(false);
+
+  if (account) {
+    const status = sync.state === 'syncing' ? 'Syncing…'
+      : sync.state === 'offline' ? `Offline. ${sync.pending} change${sync.pending === 1 ? '' : 's'} will upload when you're back online.`
+      : sync.state === 'error' ? (sync.message ?? 'Sync had a problem. It will retry.')
+      : sync.lastSync ? `Synced ${timeAgo(sync.lastSync)}${sync.pending ? ` · ${sync.pending} waiting` : ''}` : 'Ready to sync';
+    return (
+      <div className="set-group">
+        <p className="set-title"><Icon name="globe" /> Account</p>
+        <div className="set-row">
+          <span><strong>@{settings.username}</strong><span className="muted small">{account.email}</span></span>
+          <button className="pill-btn" onClick={() => signOut().then(() => toast('Signed out. Your snaps stay on this phone.'))}>Sign out</button>
+        </div>
+        <div className="set-row">
+          <span><strong>Cloud sync</strong><span className={`muted small ${sync.state === 'error' ? 'warn' : ''}`}>{status}</span></span>
+          <button className="pill-btn" disabled={sync.state === 'syncing'} onClick={syncNow}>Sync now</button>
+        </div>
+        <div className="set-row column">
+          <button className={`ghost-btn left ${armed ? 'armed' : ''}`} disabled={busy} onClick={async () => {
+            if (!armed) { setArmed(true); window.setTimeout(() => setArmed(false), 5000); return; }
+            setBusy(true);
+            try { await deleteAccount(); toast('Account deleted. Your snaps remain only on this phone.'); }
+            catch (e) { toast(e instanceof Error ? e.message : 'Delete failed.'); }
+            finally { setBusy(false); setArmed(false); }
+          }}>{busy ? 'Deleting…' : armed ? 'Tap again: permanently delete my account, snaps and photos from the server' : 'Delete my account'}</button>
+        </div>
+      </div>
+    );
+  }
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNotice(null);
+    if (password.length < 10) { toast('Use a password of at least 10 characters.'); return; }
+    setBusy(true);
+    try {
+      if (mode === 'up') {
+        const clean = username.trim().toLowerCase();
+        if (clean && !/^[a-z0-9_.-]{2,24}$/.test(clean)) { toast('Usernames are 2–24 lowercase letters, numbers, dots, dashes or underscores.'); return; }
+        const r = await signUp(email.trim(), password, clean);
+        if (r === 'confirm-email') {
+          setNotice(`Check ${email.trim()} for a confirmation email and tap the link. The page it opens may look broken; that's fine. Then come back and sign in.`);
+          setMode('in');
+        } else toast('Account created. Syncing your snaps…');
+      } else {
+        await signIn(email.trim(), password);
+        toast('Signed in. Syncing your snaps…');
+      }
+      setPassword('');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'That didn’t work. Try again.');
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <div className="set-group">
+      <p className="set-title"><Icon name="globe" /> Account</p>
+      <p className="muted small">Sign in to back up your snaps and see cats shared by other spotters. Without an account, everything stays on this phone.</p>
+      <div className="seg auth-tabs">
+        <button className={mode === 'up' ? 'active' : ''} onClick={() => setMode('up')}>Create account</button>
+        <button className={mode === 'in' ? 'active' : ''} onClick={() => setMode('in')}>Sign in</button>
+      </div>
+      {notice && <p className="notice">{notice}</p>}
+      <form className="auth-form" onSubmit={submit}>
+        <input id="authEmail" type="email" autoComplete="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input id="authPassword" type="password" autoComplete={mode === 'up' ? 'new-password' : 'current-password'} required minLength={10}
+          placeholder={mode === 'up' ? 'Password (10+ characters)' : 'Password'} value={password} onChange={(e) => setPassword(e.target.value)} />
+        {mode === 'up' && <input id="authUsername" placeholder="Username (optional)" value={username} onChange={(e) => setUsernameField(e.target.value)} />}
+        <button type="submit" className="primary-btn" disabled={busy}>{busy ? 'Please wait…' : mode === 'up' ? 'Create account' : 'Sign in'}</button>
+      </form>
+      <p className="muted small">Your email is only used to sign in. It's never shown to other spotters.</p>
+    </div>
   );
 }

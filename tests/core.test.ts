@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { blurPoint, distanceKm, formatDistance, movePoint, offsetKm } from '../src/core/geo';
 import { pointsFor, rarityOf, totalSightings } from '../src/core/rules';
-import { demoSnaps } from '../src/core/demo';
+import { EXAMPLE_ID, exampleSnap } from '../src/core/example';
 import type { Snap } from '../src/core/types';
 
 const here = { lat: 49.2827, lng: -123.1207 };
@@ -44,25 +44,34 @@ describe('rarity', () => {
   });
 });
 
+const base = (over: Partial<Snap> = {}): Snap => ({
+  ...exampleSnap(here, '/', 0), id: 'm1', source: 'mine', featured: false, crowd: { likes: 0, sightings: 0, comments: [] }, ...over,
+});
+
 describe('points', () => {
   it('counts own snaps by rarity plus 5 per logged sighting', () => {
-    const demo = demoSnaps(here, 'you', '/', 0);
-    const mine: Snap = { ...demo[1], id: 'm1', source: 'mine', habitat: 'wild', eyes: 'amber', crowd: { likes: 0, sightings: 0, comments: [] } };
+    const mine = base({ habitat: 'wild', eyes: 'amber' });
     const ix = {
       m1: { snapId: 'm1', liked: false, comments: [], sightings: [] },
-      s2: { snapId: 's2', liked: true, comments: [], sightings: [{ ...here, at: 1, by: 'you' }, { ...here, at: 2, by: 'you' }] },
+      other: { snapId: 'other', liked: true, comments: [], sightings: [{ ...here, at: 1, by: 'you' }, { ...here, at: 2, by: 'you' }] },
     };
     expect(totalSightings(mine, ix.m1)).toBe(1);
-    expect(pointsFor([mine, ...demo], ix, 'you')).toBe(100 + 10);
+    expect(pointsFor([mine], ix, 'you')).toBe(100 + 10);
+  });
+  it('counts sightings by others, the original snap, and yours', () => {
+    expect(totalSightings(base({ crowd: { likes: 0, sightings: 2, comments: [] } }))).toBe(3);
+    expect(totalSightings(base({ source: 'community', crowd: { likes: 0, sightings: 3, comments: [] } }),
+      { snapId: 'm1', liked: false, comments: [], sightings: [{ ...here, at: 1, by: 'you' }] })).toBe(4);
   });
 });
 
-describe('demo content', () => {
-  it('places demo cats around the given centre and features Claude', () => {
-    const demo = demoSnaps(here, 'you', '/base/', Date.now());
-    expect(demo[0].name).toBe('Claude');
-    expect(demo[0].photoUrl).toBe('/base/demo/claude.jpg');
-    expect(demo.length).toBe(13);
-    for (const s of demo) expect(distanceKm(here, s.location)).toBeLessThan(10);
+describe('example cat', () => {
+  it('is Not-Claude, local-only, with no made-up social numbers', () => {
+    const ex = exampleSnap(here, '/base/', 123);
+    expect(ex.name).toBe('Not-Claude');
+    expect(ex.id).toBe(EXAMPLE_ID);
+    expect(ex.source).toBe('example');
+    expect(ex.photoUrl).toBe('/base/demo/claude.jpg');
+    expect(ex.crowd).toEqual({ likes: 0, sightings: 1, comments: [] });
   });
 });

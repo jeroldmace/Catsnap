@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Circle, MapContainer, Marker, TileLayer, useMap } from 'react-leaflet';
-import { CITIES } from '../../core/demo';
+import { CITIES } from '../../core/example';
 import { formatDistance, offsetKm, timeAgo } from '../../core/geo';
 import { TIERS } from '../../core/rules';
 import { useStore, type SnapView } from '../store';
@@ -37,6 +37,7 @@ export function Radar({ filters, setFilters, onOpen, onPlus }: Props) {
   const all = TIERS.plus;
 
   const list = useMemo(() => snaps
+    .filter((s) => s.source !== 'example')
     .filter((s) => s.distanceKm <= filters.radiusKm && Date.now() - s.lastSeen <= filters.ageH * 3600000 && s.rarity.tier >= filters.minTier)
     .sort((a, b) => a.distanceKm - b.distanceKm), [snaps, filters]);
 

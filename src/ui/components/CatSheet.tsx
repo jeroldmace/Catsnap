@@ -5,11 +5,12 @@ import { useStore } from '../store';
 import { CatArt } from './CatArt';
 import { HabitatTag, Meter, RarityBadge } from './bits';
 import { Icon } from './Icon';
+import { VISIBILITY_LABEL } from '../screens/Settings';
 
 interface Props { id: string | null; onClose: () => void; onEdit: (id: string) => void; onShowOnRadar: (id: string) => void }
 
 export function CatSheet({ id, onClose, onEdit, onShowOnRadar }: Props) {
-  const { snaps, toggleLike, addComment, logSighting, deleteSnap, toast, settings } = useStore();
+  const { snaps, toggleLike, addComment, logSighting, deleteSnap, toast, settings, account } = useStore();
   const s = snaps.find((x) => x.id === id) ?? null;
   const [open, setOpen] = useState(false);
   const [comment, setComment] = useState('');
@@ -69,7 +70,9 @@ export function CatSheet({ id, onClose, onEdit, onShowOnRadar }: Props) {
           <div className="spot-line"><Icon name="pin" /><span>{s.spot}</span></div>
           <p className="muted small">
             {mine ? 'Your snap' : <>Snapped by <strong>@{s.author}</strong></>} · first seen {timeAgo(s.createdAt)}
-            {s.source === 'demo' && <span className="demo-tag">Demo</span>}
+            {s.source === 'example' && <span className="demo-tag">Example</span>}
+            {s.source === 'mine' && <span className="demo-tag">{VISIBILITY_LABEL[s.visibility ?? 'shared'].title}</span>}
+            {s.source === 'mine' && s.syncedAt !== s.updatedAt && account && <span className="demo-tag">Not uploaded yet</span>}
           </p>
 
           <div className="traits">

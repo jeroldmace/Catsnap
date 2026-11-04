@@ -1,7 +1,7 @@
 {
   "name": "catsnap",
   "private": true,
-  "version": "0.5.1",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,8 +10,9 @@
     "preview": "vite preview --host",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "android:sync": "npm run build && npx cap sync android",
-    "android:apk": "npm run android:sync && cd android && ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../releases/catsnap-$npm_package_version.apk"
+    "android:sync": "npm run build:native && npx cap sync android",
+    "android:apk": "npm run android:sync && cd android && ./gradlew assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../releases/catsnap-$npm_package_version.apk",
+    "build:native": "tsc -b && vite build --mode native"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
@@ -19,6 +20,10 @@
     "@capacitor/filesystem": "^7.1.4",
     "@capacitor/geolocation": "^7.1.4",
     "@capacitor/share": "^7.0.2",
+    "@fontsource/bricolage-grotesque": "5.2.10",
+    "@fontsource/figtree": "5.2.10",
+    "@fontsource/jetbrains-mono": "5.2.8",
+    "@supabase/supabase-js": "2.117.3",
     "idb": "8.0.0",
     "leaflet": "1.9.4",
     "react": "18.3.1",

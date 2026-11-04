@@ -2,22 +2,23 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { catSVG } from '../../core/catArt';
 import { COATS, EYES, HABITATS, RATING_KEYS, TAGS } from '../../core/catalog';
 import { rarityOf } from '../../core/rules';
-import type { CoatKey, EyeKey, HabitatKey, Ratings } from '../../core/types';
+import type { CoatKey, EyeKey, HabitatKey, Ratings, Visibility } from '../../core/types';
+import { VISIBILITY_LABEL } from './Settings';
 import { useStore, type SnapDraft } from '../store';
 import { Icon, Paw } from '../components/Icon';
 import { locationMessage } from '../../data/location';
 
 interface Props { editId: string | null; onDone: (id: string) => void; onCancelEdit: () => void }
 
-const blank = (): SnapDraft => ({
+const blank = (visibility: Visibility = 'shared'): SnapDraft => ({
   name: '', coat: 'orange', eyes: 'amber', habitat: 'street', spot: '', notes: '', tags: [],
-  ratings: { charm: 3, fluff: 3, pose: 3, friendly: 3 },
+  ratings: { charm: 3, fluff: 3, pose: 3, friendly: 3 }, visibility,
 });
 
 export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
-  const { snaps, addSnap, editSnap, geo, toast, requestLocation } = useStore();
+  const { snaps, addSnap, editSnap, geo, toast, requestLocation, settings, account } = useStore();
   const editing = editId ? snaps.find((s) => s.id === editId && s.source === 'mine') ?? null : null;
-  const [d, setD] = useState<SnapDraft>(blank);
+  const [d, setD] = useState<SnapDraft>(() => blank(settings.defaultVisibility));
   const [photo, setPhoto] = useState<Blob | null | undefined>(undefined); // undefined = unchanged (edit)
   const [preview, setPreview] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -27,12 +28,12 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
   // Load the snap being edited, or reset for a new one.
   useEffect(() => {
     if (editing) {
-      const { name, coat, eyes, habitat, spot, notes, tags, ratings } = editing;
-      setD({ name, coat, eyes, habitat, spot, notes, tags: [...tags], ratings: { ...ratings } });
+      const { name, coat, eyes, habitat, spot, notes, tags, ratings, visibility } = editing;
+      setD({ name, coat, eyes, habitat, spot, notes, tags: [...tags], ratings: { ...ratings }, visibility: visibility ?? 'shared' });
       setPreview(editing.photoSrc);
       setConfirmed(true);
     } else {
-      setD(blank()); setPreview(null); setConfirmed(false);
+      setD(blank(settings.defaultVisibility)); setPreview(null); setConfirmed(false);
     }
     setPhoto(undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -67,7 +68,7 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
       } else {
         const id = await addSnap(draft, photo ?? null);
         toast(`Posted. ${forecast.name} find, +${forecast.points} pts`);
-        setD(blank()); setPhoto(undefined); setPreview(null); setConfirmed(false);
+        setD(blank(settings.defaultVisibility)); setPhoto(undefined); setPreview(null); setConfirmed(false);
         onDone(id);
       }
     } catch (err) {
@@ -100,6 +101,7 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
               <li>Only cats you meet <em>out in the world</em>: streets, trails, attractions, harbours.</li>
               <li>No pets at home, no cats you own, no pet-shop or shelter listings.</li>
               <li>Don't chase, pick up, or feed a cat without permission.</li>
+              <li>Keep people's faces and house numbers out of the photo.</li>
             </ul>
           </div>
         )}
@@ -178,6 +180,18 @@ export function SnapForm({ editId, onDone, onCancelEdit }: Props) {
         <div className="field">
           <label htmlFor="notes">Field notes</label>
           <textarea id="notes" rows={3} value={d.notes} onChange={(e) => set('notes', e.target.value)} maxLength={400} placeholder="What were they doing? Any distinguishing marks?" />
+        </div>
+
+        <div className="field">
+          <label>Who can see this snap?</label>
+          <div className="vis-picker">
+            {(Object.keys(VISIBILITY_LABEL) as Visibility[]).map((v) => (
+              <button type="button" key={v} className={d.visibility === v ? 'active' : ''} aria-pressed={d.visibility === v} onClick={() => set('visibility', v)}>
+                <strong>{VISIBILITY_LABEL[v].title}</strong><span>{VISIBILITY_LABEL[v].detail}</span>
+              </button>
+            ))}
+          </div>
+          {!account && <span className="muted small">You're not signed in, so this snap stays on your phone for now. It's shared this way once you sign in.</span>}
         </div>
 
         {!editing && (
