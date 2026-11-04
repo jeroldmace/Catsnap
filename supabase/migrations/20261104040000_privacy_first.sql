@@ -106,12 +106,14 @@ revoke insert on public.comments from authenticated;
 grant insert (id, snap_id, body) on public.comments to authenticated;
 
 -- ---------- Photos follow their snap ----------
-alter policy "signed-in users view snap photos" on storage.objects rename to "view your own photos and photos of snaps you can see";
-alter policy "view your own photos and photos of snaps you can see" on storage.objects
+-- storage.objects is owned by Supabase Storage, so its existing policies can't be
+-- altered here. A RESTRICTIVE policy is ANDed with the permissive ones, which
+-- narrows photo reads to your own folder or photos of snaps you can see.
+create policy "photos only for snaps you can see" on storage.objects
+  as restrictive
+  for select to authenticated
   using (
-    bucket_id = 'snap-photos'
-    and (
-      (storage.foldername(name))[1] = (select auth.uid())::text
-      or exists (select 1 from public.snaps s where s.photo_path = name)
-    )
+    bucket_id <> 'snap-photos'
+    or (storage.foldername(name))[1] = (select auth.uid())::text
+    or exists (select 1 from public.snaps s where s.photo_path = name)
   );
